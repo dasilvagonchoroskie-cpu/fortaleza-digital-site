@@ -47,38 +47,8 @@
       <p class="eyebrow">O que fazemos</p>
       <h2>Nossos serviços</h2>
 
-      <div class="services-grid">
-        <article class="service-card">
-          <div class="service-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#2DD4BF" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-          </div>
-          <h3>Criação de sites</h3>
-          <p>Sites institucionais ou lojas virtuais completas, com painel próprio para você gerenciar tudo sem depender de ninguém.</p>
-        </article>
-
-        <article class="service-card">
-          <div class="service-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#2DD4BF" stroke-width="1.6"><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-          </div>
-          <h3>Criação de aplicativos</h3>
-          <p>Aplicativos Android sob medida, pensados para resolver um problema real do seu dia a dia ou do seu negócio.</p>
-        </article>
-
-        <article class="service-card">
-          <div class="service-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#2DD4BF" stroke-width="1.6"><path d="M12 2 L21 6 V12 C21 17 17 20.5 12 22 C7 20.5 3 17 3 12 V6 Z"/></svg>
-          </div>
-          <h3>Diagnóstico de segurança</h3>
-          <p>Identificação de vulnerabilidades em sites, sistemas e redes, sempre com autorização formal por escrito, conforme a lei.</p>
-        </article>
-
-        <article class="service-card">
-          <div class="service-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#2DD4BF" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11 V7 a4 4 0 0 1 8 0 v4"/></svg>
-          </div>
-          <h3>Blindagem e correção</h3>
-          <p>Correção das falhas encontradas, criptografia, autenticação forte e proteção de dados aplicadas de ponta a ponta.</p>
-        </article>
+      <div class="services-grid" id="servicos-lista">
+        <p class="loading-msg">Carregando serviços...</p>
       </div>
     </div>
   </section>
@@ -87,8 +57,8 @@
     <div class="container">
       <p class="eyebrow">Projetos</p>
       <h2>Portfólio</h2>
-      <div class="portfolio-empty">
-        <p>Os projetos entram aqui conforme forem ficando prontos.</p>
+      <div id="portfolio-lista">
+        <p class="loading-msg">Carregando portfólio...</p>
       </div>
     </div>
   </section>
@@ -98,7 +68,7 @@
       <p class="eyebrow">Fale com a gente</p>
       <h2>Contato</h2>
       <p class="contact-desc">Me conta o que você precisa e eu retorno com uma proposta.</p>
-      <div class="contact-links">
+      <div class="contact-links" id="contato-info">
         <a href="mailto:fortalezadigitalsecurity@gmail.com" class="contact-link">fortalezadigitalsecurity@gmail.com</a>
       </div>
     </div>
@@ -109,13 +79,17 @@
 <footer class="site-footer">
   <div class="container">
     <p>© <span id="ano"></span> Fortaleza Digital. Todos os direitos reservados.</p>
+    <p><a href="admin.html" class="admin-link">Área administrativa</a></p>
   </div>
 </footer>
 
-<a href="https://wa.me/5564996472794" class="whatsapp-float" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+<a id="whatsapp-btn" href="#" class="whatsapp-float" target="_blank" rel="noopener" aria-label="Falar no WhatsApp" style="display:none">
   <svg viewBox="0 0 24 24" width="28" height="28" fill="#fff"><path d="M20.5 3.5A11.8 11.8 0 0 0 12 0C5.4 0 0 5.4 0 12c0 2.1.6 4.2 1.6 6L0 24l6.2-1.6c1.7.9 3.7 1.4 5.8 1.4 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.3ZM12 21.8c-1.9 0-3.7-.5-5.3-1.4l-.4-.2-3.7 1 1-3.6-.2-.4A9.7 9.7 0 0 1 2.2 12c0-5.4 4.4-9.8 9.8-9.8 2.6 0 5.1 1 6.9 2.9a9.7 9.7 0 0 1 2.9 6.9c0 5.4-4.4 9.8-9.8 9.8Zm5.4-7.3c-.3-.1-1.7-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z"/></svg>
 </a>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
