@@ -3,6 +3,7 @@ auth.onAuthStateChanged(function(user) {
   if (user) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('painel').style.display = 'block';
+    carregarTextos();
     carregarServicos();
     carregarPortfolio();
     carregarContato();
@@ -35,6 +36,46 @@ function trocarSenha() {
     document.getElementById('senha-msg').textContent = 'Senha alterada com sucesso!';
   }).catch(function(error) {
     alert('Erro ao trocar senha: ' + error.message + '\n\nPode ser necessário sair e entrar de novo antes de trocar a senha.');
+  });
+}
+
+// ----- TEXTOS GERAIS DO SITE -----
+let textosDocId = null;
+
+function carregarTextos() {
+  db.collection('conteudo').limit(1).get().then(function(snapshot) {
+    if (snapshot.empty) return;
+    textosDocId = snapshot.docs[0].id;
+    const data = snapshot.docs[0].data();
+    document.getElementById('texto-eyebrow').value = data.eyebrow || '';
+    document.getElementById('texto-titulo').value = data.titulo || '';
+    document.getElementById('texto-descricao').value = data.descricao || '';
+    document.getElementById('texto-botao').value = data.botao || '';
+  });
+}
+
+function salvarTextos() {
+  const eyebrow = document.getElementById('texto-eyebrow').value.trim();
+  const titulo = document.getElementById('texto-titulo').value.trim();
+  const descricao = document.getElementById('texto-descricao').value.trim();
+  const botao = document.getElementById('texto-botao').value.trim();
+
+  const dados = { eyebrow, titulo, descricao, botao };
+
+  if (!textosDocId) {
+    db.collection('conteudo').add(dados).then(function(docRef) {
+      textosDocId = docRef.id;
+      document.getElementById('textos-msg').textContent = 'Textos salvos!';
+      setTimeout(() => { document.getElementById('textos-msg').textContent = ''; }, 3000);
+    });
+    return;
+  }
+
+  db.collection('conteudo').doc(textosDocId).update(dados).then(function() {
+    document.getElementById('textos-msg').textContent = 'Textos salvos!';
+    setTimeout(() => { document.getElementById('textos-msg').textContent = ''; }, 3000);
+  }).catch(function(error) {
+    alert('Erro ao salvar: ' + error.message);
   });
 }
 
@@ -129,12 +170,14 @@ function carregarPortfolio() {
 function adicionarProjeto() {
   const titulo = document.getElementById('novo-projeto-titulo').value.trim();
   const descricao = document.getElementById('novo-projeto-descricao').value.trim();
+  const imagem = document.getElementById('novo-projeto-imagem').value.trim();
 
   if (!titulo) { alert('Preencha o título.'); return; }
 
-  db.collection('portfolio').add({ titulo, descricao }).then(function() {
+  db.collection('portfolio').add({ titulo, descricao, imagem }).then(function() {
     document.getElementById('novo-projeto-titulo').value = '';
     document.getElementById('novo-projeto-descricao').value = '';
+    document.getElementById('novo-projeto-imagem').value = '';
     carregarPortfolio();
   }).catch(function(error) {
     alert('Erro ao adicionar: ' + error.message);

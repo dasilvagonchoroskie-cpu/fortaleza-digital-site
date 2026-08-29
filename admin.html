@@ -76,6 +76,28 @@
   <div id="painel" style="display:none">
 
     <div class="admin-box">
+      <h2>Textos principais do site</h2>
+      <div class="admin-field">
+        <label>Frase de destaque (acima do título)</label>
+        <input type="text" id="texto-eyebrow">
+      </div>
+      <div class="admin-field">
+        <label>Título principal</label>
+        <textarea id="texto-titulo"></textarea>
+      </div>
+      <div class="admin-field">
+        <label>Descrição abaixo do título</label>
+        <textarea id="texto-descricao"></textarea>
+      </div>
+      <div class="admin-field">
+        <label>Texto do botão de contato</label>
+        <input type="text" id="texto-botao">
+      </div>
+      <button class="admin-btn" onclick="salvarTextos()">Salvar textos</button>
+      <p id="textos-msg" class="success-msg"></p>
+    </div>
+
+    <div class="admin-box">
       <h2>Serviços</h2>
       <div id="lista-servicos"></div>
       <hr style="border-color: var(--border); margin: 16px 0;">
@@ -107,6 +129,10 @@
       <div class="admin-field">
         <label>Descrição</label>
         <textarea id="novo-projeto-descricao"></textarea>
+      </div>
+      <div class="admin-field">
+        <label>Link da imagem (opcional — use postimages.org pra hospedar a foto de graça)</label>
+        <input type="text" id="novo-projeto-imagem" placeholder="https://...">
       </div>
       <button class="admin-btn" onclick="adicionarProjeto()">Adicionar projeto</button>
     </div>

@@ -135,6 +135,13 @@ a { color: inherit; text-decoration: none; }
   font-size: 14px;
 }
 
+.portfolio-img {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  display: block;
+}
+
 /* Portfolio */
 .portfolio-empty {
   border: 1px dashed var(--border);

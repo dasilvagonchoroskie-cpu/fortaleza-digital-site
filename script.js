@@ -1,5 +1,17 @@
 document.getElementById('ano').textContent = new Date().getFullYear();
 
+// Carrega os textos principais do site
+db.collection('conteudo').limit(1).get().then(function(snapshot) {
+  if (snapshot.empty) return;
+  const data = snapshot.docs[0].data();
+  if (data.eyebrow) document.getElementById('hero-eyebrow').textContent = data.eyebrow;
+  if (data.titulo) document.getElementById('hero-titulo').textContent = data.titulo;
+  if (data.descricao) document.getElementById('hero-descricao').textContent = data.descricao;
+  if (data.botao) document.getElementById('hero-botao').textContent = data.botao;
+}).catch(function(error) {
+  console.error('Erro ao carregar textos:', error);
+});
+
 // Carrega os serviços do Firestore
 db.collection('serviços').orderBy('ordem').get().then(function(snapshot) {
   const container = document.getElementById('servicos-lista');
@@ -45,7 +57,9 @@ db.collection('portfolio').get().then(function(snapshot) {
     hasRealProject = true;
     const card = document.createElement('article');
     card.className = 'service-card';
+    const imagemHtml = data.imagem ? `<img src="${escapeHtml(data.imagem)}" alt="${escapeHtml(data.titulo || '')}" class="portfolio-img">` : '';
     card.innerHTML = `
+      ${imagemHtml}
       <h3>${escapeHtml(data.titulo || '')}</h3>
       <p>${escapeHtml(data.descricao || '')}</p>
     `;
