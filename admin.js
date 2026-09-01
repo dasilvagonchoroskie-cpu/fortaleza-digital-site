@@ -1,3 +1,32 @@
+// ===== CONFIGURAÇÃO DO IMGBB (upload automático de fotos) =====
+// Evandro: troque o texto abaixo pela sua chave real do ImgBB.
+const IMGBB_API_KEY = 'COLOQUE_SUA_CHAVE_DO_IMGBB_AQUI';
+
+function uploadImagemImgBB(arquivo) {
+  return new Promise(function(resolve, reject) {
+    if (!arquivo) { reject('Nenhum arquivo selecionado.'); return; }
+    if (IMGBB_API_KEY === 'COLOQUE_SUA_CHAVE_DO_IMGBB_AQUI') {
+      reject('Chave do ImgBB ainda não configurada. Peça pro Claude te ajudar a adicionar.');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('image', arquivo);
+    fetch('https://api.imgbb.com/1/upload?key=' + IMGBB_API_KEY, {
+      method: 'POST',
+      body: formData
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data && data.success) {
+          resolve(data.data.url);
+        } else {
+          reject((data && data.error && data.error.message) || 'Erro ao enviar imagem.');
+        }
+      })
+      .catch(function(err) { reject(err.message || 'Erro de conexão ao enviar imagem.'); });
+  });
+}
+
 // ----- LOGIN -----
 auth.onAuthStateChanged(function(user) {
   if (user) {
@@ -7,6 +36,7 @@ auth.onAuthStateChanged(function(user) {
     carregarServicos();
     carregarPortfolio();
     carregarContato();
+    carregarEquipe();
   } else {
     document.getElementById('login-screen').style.display = 'block';
     document.getElementById('painel').style.display = 'none';
@@ -170,18 +200,36 @@ function carregarPortfolio() {
 function adicionarProjeto() {
   const titulo = document.getElementById('novo-projeto-titulo').value.trim();
   const descricao = document.getElementById('novo-projeto-descricao').value.trim();
-  const imagem = document.getElementById('novo-projeto-imagem').value.trim();
+  const arquivoInput = document.getElementById('novo-projeto-imagem-arquivo');
+  const statusEl = document.getElementById('novo-projeto-imagem-status');
 
   if (!titulo) { alert('Preencha o título.'); return; }
 
-  db.collection('portfolio').add({ titulo, descricao, imagem }).then(function() {
-    document.getElementById('novo-projeto-titulo').value = '';
-    document.getElementById('novo-projeto-descricao').value = '';
-    document.getElementById('novo-projeto-imagem').value = '';
-    carregarPortfolio();
-  }).catch(function(error) {
-    alert('Erro ao adicionar: ' + error.message);
-  });
+  function salvarNoFirestore(imagemUrl) {
+    db.collection('portfolio').add({ titulo, descricao, imagem: imagemUrl || '' }).then(function() {
+      document.getElementById('novo-projeto-titulo').value = '';
+      document.getElementById('novo-projeto-descricao').value = '';
+      arquivoInput.value = '';
+      statusEl.textContent = '';
+      carregarPortfolio();
+    }).catch(function(error) {
+      alert('Erro ao adicionar: ' + error.message);
+    });
+  }
+
+  const arquivo = arquivoInput.files[0];
+  if (arquivo) {
+    statusEl.textContent = 'Enviando foto...';
+    uploadImagemImgBB(arquivo).then(function(url) {
+      statusEl.textContent = 'Foto enviada!';
+      salvarNoFirestore(url);
+    }).catch(function(erro) {
+      statusEl.textContent = '';
+      alert('Erro ao enviar a foto: ' + erro);
+    });
+  } else {
+    salvarNoFirestore('');
+  }
 }
 
 function editarProjeto(id) {
@@ -204,7 +252,7 @@ function apagarProjeto(id) {
   db.collection('portfolio').doc(id).delete().then(carregarPortfolio);
 }
 
-// ----- CONTATO -----
+// ----- CONTATO GERAL (WhatsApp flutuante + e-mail principal) -----
 let contatoDocId = null;
 
 function carregarContato() {
@@ -235,6 +283,95 @@ function salvarContato() {
   }).catch(function(error) {
     alert('Erro ao salvar: ' + error.message);
   });
+}
+
+// ----- EQUIPE (contatos adicionais, com foto) -----
+function carregarEquipe() {
+  db.collection('equipe').get().then(function(snapshot) {
+    const container = document.getElementById('lista-equipe');
+    container.innerHTML = '';
+    snapshot.forEach(function(doc) {
+      const data = doc.data();
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = `
+        <div class="item-info">
+          <strong>${escapeHtml(data.nome || '')} — ${escapeHtml(data.cargo || '')}</strong>
+          <span>${escapeHtml(data.whatsapp || '')}${data.email ? ' · ' + escapeHtml(data.email) : ''}</span>
+        </div>
+        <div class="item-actions">
+          <button class="admin-btn secondary" onclick="editarMembro('${doc.id}')">Editar</button>
+          <button class="admin-btn danger" onclick="apagarMembro('${doc.id}')">Apagar</button>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+  });
+}
+
+function adicionarMembro() {
+  const nome = document.getElementById('novo-membro-nome').value.trim();
+  const cargo = document.getElementById('novo-membro-cargo').value.trim();
+  const whatsapp = document.getElementById('novo-membro-whatsapp').value.trim();
+  const email = document.getElementById('novo-membro-email').value.trim();
+  const arquivoInput = document.getElementById('novo-membro-foto');
+  const statusEl = document.getElementById('novo-membro-foto-status');
+
+  if (!nome) { alert('Preencha o nome.'); return; }
+
+  function salvar(fotoUrl) {
+    db.collection('equipe').add({ nome, cargo, whatsapp, email, foto: fotoUrl || '' }).then(function() {
+      document.getElementById('novo-membro-nome').value = '';
+      document.getElementById('novo-membro-cargo').value = '';
+      document.getElementById('novo-membro-whatsapp').value = '';
+      document.getElementById('novo-membro-email').value = '';
+      arquivoInput.value = '';
+      statusEl.textContent = '';
+      carregarEquipe();
+    }).catch(function(error) {
+      alert('Erro ao adicionar: ' + error.message);
+    });
+  }
+
+  const arquivo = arquivoInput.files[0];
+  if (arquivo) {
+    statusEl.textContent = 'Enviando foto...';
+    uploadImagemImgBB(arquivo).then(function(url) {
+      statusEl.textContent = 'Foto enviada!';
+      salvar(url);
+    }).catch(function(erro) {
+      statusEl.textContent = '';
+      alert('Erro ao enviar a foto: ' + erro);
+    });
+  } else {
+    salvar('');
+  }
+}
+
+function editarMembro(id) {
+  db.collection('equipe').doc(id).get().then(function(doc) {
+    const data = doc.data();
+    const novoNome = prompt('Nome:', data.nome);
+    if (novoNome === null) return;
+    const novoCargo = prompt('Cargo:', data.cargo);
+    if (novoCargo === null) return;
+    const novoWhatsapp = prompt('WhatsApp:', data.whatsapp);
+    if (novoWhatsapp === null) return;
+    const novoEmail = prompt('E-mail:', data.email);
+    if (novoEmail === null) return;
+
+    db.collection('equipe').doc(id).update({
+      nome: novoNome,
+      cargo: novoCargo,
+      whatsapp: novoWhatsapp,
+      email: novoEmail
+    }).then(carregarEquipe);
+  });
+}
+
+function apagarMembro(id) {
+  if (!confirm('Tem certeza que quer apagar esta pessoa da equipe?')) return;
+  db.collection('equipe').doc(id).delete().then(carregarEquipe);
 }
 
 function escapeHtml(str) {
