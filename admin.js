@@ -1,11 +1,11 @@
 // ===== CONFIGURAÇÃO DO IMGBB (upload automático de fotos) =====
 // Evandro: troque o texto abaixo pela sua chave real do ImgBB.
-const IMGBB_API_KEY = 'COLOQUE_SUA_CHAVE_DO_IMGBB_AQUI';
+const IMGBB_API_KEY = '61956ffcfe2f0d78692db113027c5319';
 
 function uploadImagemImgBB(arquivo) {
   return new Promise(function(resolve, reject) {
     if (!arquivo) { reject('Nenhum arquivo selecionado.'); return; }
-    if (IMGBB_API_KEY === 'COLOQUE_SUA_CHAVE_DO_IMGBB_AQUI') {
+    if (!IMGBB_API_KEY) {
       reject('Chave do ImgBB ainda não configurada. Peça pro Claude te ajudar a adicionar.');
       return;
     }
