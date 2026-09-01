@@ -18,12 +18,21 @@ function uploadImagemImgBB(arquivo) {
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data && data.success) {
-          resolve(data.data.url);
+          resolve({ url: data.data.url, deleteUrl: data.data.delete_url || '' });
         } else {
           reject((data && data.error && data.error.message) || 'Erro ao enviar imagem.');
         }
       })
       .catch(function(err) { reject(err.message || 'Erro de conexão ao enviar imagem.'); });
+  });
+}
+
+// Tenta apagar a foto do ImgBB usando o link de exclusão salvo.
+// Não é uma API oficial do ImgBB, então não há garantia de que sempre funcione.
+function tentarApagarDoImgBB(deleteUrl) {
+  if (!deleteUrl) return;
+  fetch(deleteUrl, { mode: 'no-cors' }).catch(function() {
+    // Silencioso: se falhar, a foto só continua guardada no ImgBB sem uso, sem custo.
   });
 }
 
@@ -205,8 +214,8 @@ function adicionarProjeto() {
 
   if (!titulo) { alert('Preencha o título.'); return; }
 
-  function salvarNoFirestore(imagemUrl) {
-    db.collection('portfolio').add({ titulo, descricao, imagem: imagemUrl || '' }).then(function() {
+  function salvarNoFirestore(imagemUrl, deleteUrl) {
+    db.collection('portfolio').add({ titulo, descricao, imagem: imagemUrl || '', imagemDeleteUrl: deleteUrl || '' }).then(function() {
       document.getElementById('novo-projeto-titulo').value = '';
       document.getElementById('novo-projeto-descricao').value = '';
       arquivoInput.value = '';
@@ -220,15 +229,15 @@ function adicionarProjeto() {
   const arquivo = arquivoInput.files[0];
   if (arquivo) {
     statusEl.textContent = 'Enviando foto...';
-    uploadImagemImgBB(arquivo).then(function(url) {
+    uploadImagemImgBB(arquivo).then(function(resultado) {
       statusEl.textContent = 'Foto enviada!';
-      salvarNoFirestore(url);
+      salvarNoFirestore(resultado.url, resultado.deleteUrl);
     }).catch(function(erro) {
       statusEl.textContent = '';
       alert('Erro ao enviar a foto: ' + erro);
     });
   } else {
-    salvarNoFirestore('');
+    salvarNoFirestore('', '');
   }
 }
 
@@ -249,7 +258,13 @@ function editarProjeto(id) {
 
 function apagarProjeto(id) {
   if (!confirm('Tem certeza que quer apagar este projeto?')) return;
-  db.collection('portfolio').doc(id).delete().then(carregarPortfolio);
+  db.collection('portfolio').doc(id).get().then(function(doc) {
+    const data = doc.data();
+    if (data && data.imagemDeleteUrl) {
+      tentarApagarDoImgBB(data.imagemDeleteUrl);
+    }
+    return db.collection('portfolio').doc(id).delete();
+  }).then(carregarPortfolio);
 }
 
 // ----- CONTATO GERAL (WhatsApp flutuante + e-mail principal) -----
@@ -319,8 +334,8 @@ function adicionarMembro() {
 
   if (!nome) { alert('Preencha o nome.'); return; }
 
-  function salvar(fotoUrl) {
-    db.collection('equipe').add({ nome, cargo, whatsapp, email, foto: fotoUrl || '' }).then(function() {
+  function salvar(fotoUrl, deleteUrl) {
+    db.collection('equipe').add({ nome, cargo, whatsapp, email, foto: fotoUrl || '', fotoDeleteUrl: deleteUrl || '' }).then(function() {
       document.getElementById('novo-membro-nome').value = '';
       document.getElementById('novo-membro-cargo').value = '';
       document.getElementById('novo-membro-whatsapp').value = '';
@@ -336,15 +351,15 @@ function adicionarMembro() {
   const arquivo = arquivoInput.files[0];
   if (arquivo) {
     statusEl.textContent = 'Enviando foto...';
-    uploadImagemImgBB(arquivo).then(function(url) {
+    uploadImagemImgBB(arquivo).then(function(resultado) {
       statusEl.textContent = 'Foto enviada!';
-      salvar(url);
+      salvar(resultado.url, resultado.deleteUrl);
     }).catch(function(erro) {
       statusEl.textContent = '';
       alert('Erro ao enviar a foto: ' + erro);
     });
   } else {
-    salvar('');
+    salvar('', '');
   }
 }
 
@@ -371,7 +386,13 @@ function editarMembro(id) {
 
 function apagarMembro(id) {
   if (!confirm('Tem certeza que quer apagar esta pessoa da equipe?')) return;
-  db.collection('equipe').doc(id).delete().then(carregarEquipe);
+  db.collection('equipe').doc(id).get().then(function(doc) {
+    const data = doc.data();
+    if (data && data.fotoDeleteUrl) {
+      tentarApagarDoImgBB(data.fotoDeleteUrl);
+    }
+    return db.collection('equipe').doc(id).delete();
+  }).then(carregarEquipe);
 }
 
 function escapeHtml(str) {
