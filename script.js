@@ -73,6 +73,41 @@ db.collection('portfolio').get().then(function(snapshot) {
   console.error('Erro ao carregar portfólio:', error);
 });
 
+// Carrega a equipe (contatos adicionais) do Firestore
+db.collection('equipe').get().then(function(snapshot) {
+  if (snapshot.empty) return;
+
+  const secao = document.getElementById('equipe');
+  const container = document.getElementById('equipe-lista');
+  container.innerHTML = '';
+
+  snapshot.forEach(function(doc) {
+    const data = doc.data();
+    const card = document.createElement('article');
+    card.className = 'team-card';
+    const fotoHtml = data.foto
+      ? `<img src="${escapeHtml(data.foto)}" alt="${escapeHtml(data.nome || '')}" class="team-photo">`
+      : `<div class="team-photo team-photo-placeholder">${escapeHtml((data.nome || '?').charAt(0).toUpperCase())}</div>`;
+    const linksHtml = `
+      <div class="team-links">
+        ${data.whatsapp ? `<a href="https://wa.me/${escapeHtml(data.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+        ${data.email ? `<a href="mailto:${escapeHtml(data.email)}">E-mail</a>` : ''}
+      </div>
+    `;
+    card.innerHTML = `
+      ${fotoHtml}
+      <h3>${escapeHtml(data.nome || '')}</h3>
+      <p class="team-cargo">${escapeHtml(data.cargo || '')}</p>
+      ${linksHtml}
+    `;
+    container.appendChild(card);
+  });
+
+  secao.style.display = '';
+}).catch(function(error) {
+  console.error('Erro ao carregar equipe:', error);
+});
+
 // Carrega o WhatsApp e e-mail de contato
 db.collection('contato').limit(1).get().then(function(snapshot) {
   if (snapshot.empty) return;
