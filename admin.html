@@ -113,6 +113,19 @@
       </div>
 
       <div class="admin-box">
+        <h2>Banner do site</h2>
+        <p style="font-size:0.8125rem; color: var(--text-muted); margin-bottom: 14px;">Imagem larga que aparece logo abaixo do menu, acima do título principal.</p>
+        <div class="admin-field">
+          <div id="banner-preview-wrap"></div>
+          <input type="file" id="banner-foto" accept="image/*">
+          <p id="banner-status" style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;"></p>
+        </div>
+        <button class="admin-btn" onclick="salvarBanner()">Salvar banner</button>
+        <button class="admin-btn secondary" type="button" onclick="removerBanner()">Remover banner</button>
+        <p id="banner-msg" class="success-msg"></p>
+      </div>
+
+      <div class="admin-box">
         <h2>Serviços</h2>
         <div id="lista-servicos"></div>
         <hr style="border-color: var(--border); margin: 16px 0;">
