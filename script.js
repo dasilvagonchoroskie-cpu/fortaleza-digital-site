@@ -82,6 +82,10 @@ db.collection('conteudo').limit(1).get().then(function(snapshot) {
   if (data.titulo) document.getElementById('hero-titulo').textContent = data.titulo;
   if (data.descricao) document.getElementById('hero-descricao').textContent = data.descricao;
   if (data.botao) document.getElementById('hero-botao').textContent = data.botao;
+  if (data.bannerUrl) {
+    document.getElementById('banner-img').src = data.bannerUrl;
+    document.getElementById('banner-wrap').style.display = 'block';
+  }
   aplicarTema(data);
   try { localStorage.setItem(CACHE_CONFIG_CHAVE, JSON.stringify(data)); } catch (e) {}
 }).catch(function(error) {
