@@ -5,35 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Área Administrativa — Fortaleza Digital</title>
 <link rel="stylesheet" href="style.css">
-<style>
-  .admin-wrap { max-width: 640px; margin: 0 auto; padding: 40px 20px; }
-  .admin-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
-  .admin-box h2 { font-size: 18px; margin-bottom: 16px; }
-  .admin-field { margin-bottom: 14px; }
-  .admin-field label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
-  .admin-field input, .admin-field textarea {
-    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-    color: var(--text); padding: 10px; font-size: 14px; font-family: inherit;
-  }
-  .admin-field textarea { min-height: 70px; resize: vertical; }
-  .admin-btn {
-    background: var(--accent); color: var(--accent-ink); border: none; border-radius: 8px;
-    padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
-  }
-  .admin-btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
-  .admin-btn.danger { background: #E05252; color: #fff; }
-  .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 10px; }
-  .item-row:last-child { border-bottom: none; }
-  .item-info { flex: 1; }
-  .item-info strong { display: block; font-size: 14px; }
-  .item-info span { font-size: 12px; color: var(--text-muted); }
-  .item-actions { display: flex; gap: 6px; }
-  .item-actions button { font-size: 12px; padding: 6px 10px; }
-  #login-screen { text-align: center; }
-  #login-screen input { margin-bottom: 10px; }
-  .error-msg { color: #E05252; font-size: 13px; margin-top: 8px; }
-  .success-msg { color: var(--accent); font-size: 13px; margin-top: 8px; }
-</style>
+<script>
+(function() {
+  try {
+    var c = localStorage.getItem('fortaleza_config_cache');
+    if (!c) return;
+    var config = JSON.parse(c);
+    var TEMAS = {
+      'teal-escuro':      { bg: '#0B1220', texto: '#F1F5F9', destaque: '#2DD4BF' },
+      'azul-cibernetico': { bg: '#0A0E1A', texto: '#E8EEF7', destaque: '#4C8DFF' },
+      'verde-seguranca':  { bg: '#0A140D', texto: '#E5F2E8', destaque: '#4ADE80' },
+      'grafite':          { bg: '#161819', texto: '#F0F0F0', destaque: '#2DD4BF' },
+      'claro-corporativo':{ bg: '#F4F6F9', texto: '#12181F', destaque: '#0F6E63' },
+      'roxo-tech':        { bg: '#120A1A', texto: '#F0EAF5', destaque: '#9D6FE0' }
+    };
+    function ajustarCor(hex, quantidade) {
+      hex = hex.replace('#', '');
+      if (hex.length === 3) hex = hex.split('').map(function(ch) { return ch + ch; }).join('');
+      var num = parseInt(hex, 16);
+      var r = (num >> 16) + quantidade;
+      var g = ((num >> 8) & 0x00FF) + quantidade;
+      var b = (num & 0x0000FF) + quantidade;
+      r = Math.max(0, Math.min(255, r));
+      g = Math.max(0, Math.min(255, g));
+      b = Math.max(0, Math.min(255, b));
+      return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1).toUpperCase();
+    }
+    var tema = TEMAS[config.tema] || TEMAS['teal-escuro'];
+    var raiz = document.documentElement.style;
+    raiz.setProperty('--bg', tema.bg);
+    raiz.setProperty('--surface', ajustarCor(tema.bg, 14));
+    raiz.setProperty('--surface-2', ajustarCor(tema.bg, 8));
+    raiz.setProperty('--border', ajustarCor(tema.bg, 40));
+    raiz.setProperty('--danger-bg', ajustarCor(tema.bg, 12));
+    raiz.setProperty('--success-bg', ajustarCor(tema.bg, 12));
+    raiz.setProperty('--text', tema.texto);
+    raiz.setProperty('--text-muted', ajustarCor(tema.texto, -60));
+    raiz.setProperty('--accent', tema.destaque);
+    raiz.setProperty('--accent-dim', ajustarCor(tema.destaque, -35));
+    raiz.setProperty('--escala-fonte', config.escalaFonte || '1');
+  } catch (e) {}
+})();
+</script>
 </head>
 <body>
 
@@ -59,7 +72,6 @@
 
 <div class="admin-wrap">
 
-  <!-- TELA DE LOGIN -->
   <div id="login-screen" class="admin-box">
     <h2>Entrar</h2>
     <div class="admin-field">
@@ -70,124 +82,211 @@
     </div>
     <button class="admin-btn" onclick="fazerLogin()">Entrar</button>
     <p id="login-erro" class="error-msg"></p>
+    <p style="margin-top:16px;">
+      <a href="#" onclick="recuperarSenha(); return false;" style="color:var(--text-muted); font-size:0.8125rem; text-decoration:underline;">Esqueci minha senha</a>
+    </p>
   </div>
 
-  <!-- PAINEL (só aparece depois do login) -->
   <div id="painel" style="display:none">
 
-    <div class="admin-box">
-      <h2>Textos principais do site</h2>
-      <div class="admin-field">
-        <label>Frase de destaque (acima do título)</label>
-        <input type="text" id="texto-eyebrow">
+    <div id="painel-conteudo" class="admin-aba">
+      <div class="admin-box">
+        <h2>Textos principais do site</h2>
+        <div class="admin-field">
+          <label>Frase de destaque (acima do título)</label>
+          <input type="text" id="texto-eyebrow">
+        </div>
+        <div class="admin-field">
+          <label>Título principal</label>
+          <textarea id="texto-titulo"></textarea>
+        </div>
+        <div class="admin-field">
+          <label>Descrição abaixo do título</label>
+          <textarea id="texto-descricao"></textarea>
+        </div>
+        <div class="admin-field">
+          <label>Texto do botão de contato</label>
+          <input type="text" id="texto-botao">
+        </div>
+        <button class="admin-btn" onclick="salvarTextos()">Salvar textos</button>
+        <p id="textos-msg" class="success-msg"></p>
       </div>
-      <div class="admin-field">
-        <label>Título principal</label>
-        <textarea id="texto-titulo"></textarea>
+
+      <div class="admin-box">
+        <h2>Serviços</h2>
+        <div id="lista-servicos"></div>
+        <hr style="border-color: var(--border); margin: 16px 0;">
+        <p style="font-size:0.8125rem; color: var(--text-muted); margin-bottom: 10px;">Adicionar novo serviço</p>
+        <div class="admin-field">
+          <label>Título</label>
+          <input type="text" id="novo-servico-titulo">
+        </div>
+        <div class="admin-field">
+          <label>Descrição</label>
+          <textarea id="novo-servico-descricao"></textarea>
+        </div>
+        <div class="admin-field">
+          <label>Ordem (número)</label>
+          <input type="number" id="novo-servico-ordem">
+        </div>
+        <button class="admin-btn" onclick="adicionarServico()">Adicionar serviço</button>
       </div>
-      <div class="admin-field">
-        <label>Descrição abaixo do título</label>
-        <textarea id="texto-descricao"></textarea>
-      </div>
-      <div class="admin-field">
-        <label>Texto do botão de contato</label>
-        <input type="text" id="texto-botao">
-      </div>
-      <button class="admin-btn" onclick="salvarTextos()">Salvar textos</button>
-      <p id="textos-msg" class="success-msg"></p>
     </div>
 
-    <div class="admin-box">
-      <h2>Serviços</h2>
-      <div id="lista-servicos"></div>
-      <hr style="border-color: var(--border); margin: 16px 0;">
-      <p style="font-size:13px; color: var(--text-muted); margin-bottom: 10px;">Adicionar novo serviço</p>
-      <div class="admin-field">
-        <label>Título</label>
-        <input type="text" id="novo-servico-titulo">
+    <div id="painel-portfolio" class="admin-aba" style="display:none">
+      <div class="admin-box">
+        <h2>Portfólio</h2>
+        <div id="lista-portfolio"></div>
+        <hr style="border-color: var(--border); margin: 16px 0;">
+        <p style="font-size:0.8125rem; color: var(--text-muted); margin-bottom: 10px;">Adicionar novo projeto</p>
+        <div class="admin-field">
+          <label>Título do projeto</label>
+          <input type="text" id="novo-projeto-titulo">
+        </div>
+        <div class="admin-field">
+          <label>Descrição</label>
+          <textarea id="novo-projeto-descricao"></textarea>
+        </div>
+        <div class="admin-field">
+          <label>Fotos do projeto (pode escolher mais de uma de uma vez)</label>
+          <input type="file" id="novo-projeto-fotos" accept="image/*" multiple>
+          <p id="novo-projeto-fotos-status" style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;"></p>
+        </div>
+        <button class="admin-btn" onclick="adicionarProjeto()">Adicionar projeto</button>
       </div>
-      <div class="admin-field">
-        <label>Descrição</label>
-        <textarea id="novo-servico-descricao"></textarea>
-      </div>
-      <div class="admin-field">
-        <label>Ordem (número)</label>
-        <input type="number" id="novo-servico-ordem">
-      </div>
-      <button class="admin-btn" onclick="adicionarServico()">Adicionar serviço</button>
     </div>
 
-    <div class="admin-box">
-      <h2>Portfólio</h2>
-      <div id="lista-portfolio"></div>
-      <hr style="border-color: var(--border); margin: 16px 0;">
-      <p style="font-size:13px; color: var(--text-muted); margin-bottom: 10px;">Adicionar novo projeto</p>
-      <div class="admin-field">
-        <label>Título do projeto</label>
-        <input type="text" id="novo-projeto-titulo">
+    <div id="painel-contato" class="admin-aba" style="display:none">
+      <div class="admin-box">
+        <h2>Contato</h2>
+        <div class="admin-field">
+          <label>WhatsApp (só números, com DDI e DDD, ex: 5564999998888)</label>
+          <input type="text" id="contato-whatsapp">
+        </div>
+        <div class="admin-field">
+          <label>E-mail</label>
+          <input type="text" id="contato-email">
+        </div>
+        <button class="admin-btn" onclick="salvarContato()">Salvar contato</button>
+        <p id="contato-msg" class="success-msg"></p>
       </div>
-      <div class="admin-field">
-        <label>Descrição</label>
-        <textarea id="novo-projeto-descricao"></textarea>
+
+      <div class="admin-box">
+        <h2>Equipe (contatos adicionais)</h2>
+        <div id="lista-equipe"></div>
+        <hr style="border-color: var(--border); margin: 16px 0;">
+        <p style="font-size:0.8125rem; color: var(--text-muted); margin-bottom: 10px;">Adicionar pessoa</p>
+        <div class="admin-field">
+          <label>Nome</label>
+          <input type="text" id="novo-membro-nome">
+        </div>
+        <div class="admin-field">
+          <label>Cargo / função</label>
+          <input type="text" id="novo-membro-cargo">
+        </div>
+        <div class="admin-field">
+          <label>WhatsApp (só números, com DDI e DDD, ex: 5564999998888)</label>
+          <input type="text" id="novo-membro-whatsapp">
+        </div>
+        <div class="admin-field">
+          <label>E-mail</label>
+          <input type="text" id="novo-membro-email">
+        </div>
+        <div class="admin-field">
+          <label>Foto de perfil</label>
+          <input type="file" id="novo-membro-foto" accept="image/*">
+          <p id="novo-membro-foto-status" style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;"></p>
+        </div>
+        <button class="admin-btn" onclick="adicionarMembro()">Adicionar à equipe</button>
       </div>
-      <div class="admin-field">
-        <label>Foto do projeto</label>
-        <input type="file" id="novo-projeto-imagem-arquivo" accept="image/*">
-        <p id="novo-projeto-imagem-status" style="font-size:12px;color:var(--text-muted);margin-top:6px;"></p>
-      </div>
-      <button class="admin-btn" onclick="adicionarProjeto()">Adicionar projeto</button>
     </div>
 
-    <div class="admin-box">
-      <h2>Contato</h2>
-      <div class="admin-field">
-        <label>WhatsApp (só números, com DDI e DDD, ex: 5564999998888)</label>
-        <input type="text" id="contato-whatsapp">
+    <div id="painel-conta" class="admin-aba" style="display:none">
+      <div class="admin-box">
+        <h2>Aparência do site</h2>
+        <p style="font-size:0.8125rem; color: var(--text-muted); margin-bottom: 18px;">Temas prontos, com contraste já conferido pra letra nunca ficar apagada.</p>
+        <div class="admin-field">
+          <label>Tema de cores</label>
+          <div class="tema-swatches" id="tema-swatches">
+            <button type="button" class="tema-swatch ativo" data-tema="teal-escuro" onclick="escolherTema('teal-escuro')">
+              <span class="tema-preview" style="background:#0B1220;"><span style="background:#F1F5F9"></span><span style="background:#2DD4BF"></span></span>
+              Teal Escuro
+            </button>
+            <button type="button" class="tema-swatch" data-tema="azul-cibernetico" onclick="escolherTema('azul-cibernetico')">
+              <span class="tema-preview" style="background:#0A0E1A;"><span style="background:#E8EEF7"></span><span style="background:#4C8DFF"></span></span>
+              Azul Cibernético
+            </button>
+            <button type="button" class="tema-swatch" data-tema="verde-seguranca" onclick="escolherTema('verde-seguranca')">
+              <span class="tema-preview" style="background:#0A140D;"><span style="background:#E5F2E8"></span><span style="background:#4ADE80"></span></span>
+              Verde Segurança
+            </button>
+            <button type="button" class="tema-swatch" data-tema="grafite" onclick="escolherTema('grafite')">
+              <span class="tema-preview" style="background:#161819;"><span style="background:#F0F0F0"></span><span style="background:#2DD4BF"></span></span>
+              Grafite
+            </button>
+            <button type="button" class="tema-swatch" data-tema="claro-corporativo" onclick="escolherTema('claro-corporativo')">
+              <span class="tema-preview" style="background:#F4F6F9;"><span style="background:#12181F"></span><span style="background:#0F6E63"></span></span>
+              Claro Corporativo
+            </button>
+            <button type="button" class="tema-swatch" data-tema="roxo-tech" onclick="escolherTema('roxo-tech')">
+              <span class="tema-preview" style="background:#120A1A;"><span style="background:#F0EAF5"></span><span style="background:#9D6FE0"></span></span>
+              Roxo Tech
+            </button>
+          </div>
+        </div>
+        <div class="admin-field">
+          <label>Tamanho do texto</label>
+          <div class="fonte-opcoes" id="fonte-opcoes">
+            <button type="button" class="fonte-opcao" data-fonte="0.9" onclick="escolherFonte('0.9')">Pequeno</button>
+            <button type="button" class="fonte-opcao ativo" data-fonte="1" onclick="escolherFonte('1')">Médio</button>
+            <button type="button" class="fonte-opcao" data-fonte="1.15" onclick="escolherFonte('1.15')">Grande</button>
+          </div>
+        </div>
+        <button class="admin-btn" onclick="salvarAparencia()">Salvar aparência</button>
+        <p id="aparencia-msg" class="success-msg"></p>
       </div>
-      <div class="admin-field">
-        <label>E-mail</label>
-        <input type="text" id="contato-email">
+
+      <div class="admin-box">
+        <h2>Sua conta</h2>
+        <button class="admin-btn secondary" onclick="trocarSenha()">Trocar minha senha</button>
+        <button class="admin-btn secondary" onclick="sair()">Sair</button>
+        <p id="senha-msg" class="success-msg"></p>
       </div>
-      <button class="admin-btn" onclick="salvarContato()">Salvar contato</button>
-      <p id="contato-msg" class="success-msg"></p>
     </div>
 
-    <div class="admin-box">
-      <h2>Equipe (contatos adicionais)</h2>
-      <div id="lista-equipe"></div>
-      <hr style="border-color: var(--border); margin: 16px 0;">
-      <p style="font-size:13px; color: var(--text-muted); margin-bottom: 10px;">Adicionar pessoa</p>
-      <div class="admin-field">
-        <label>Nome</label>
-        <input type="text" id="novo-membro-nome">
-      </div>
-      <div class="admin-field">
-        <label>Cargo / função</label>
-        <input type="text" id="novo-membro-cargo">
-      </div>
-      <div class="admin-field">
-        <label>WhatsApp (só números, com DDI e DDD, ex: 5564999998888)</label>
-        <input type="text" id="novo-membro-whatsapp">
-      </div>
-      <div class="admin-field">
-        <label>E-mail</label>
-        <input type="text" id="novo-membro-email">
-      </div>
-      <div class="admin-field">
-        <label>Foto de perfil</label>
-        <input type="file" id="novo-membro-foto" accept="image/*">
-        <p id="novo-membro-foto-status" style="font-size:12px;color:var(--text-muted);margin-top:6px;"></p>
-      </div>
-      <button class="admin-btn" onclick="adicionarMembro()">Adicionar à equipe</button>
-    </div>
+  </div>
 
-    <div class="admin-box">
-      <h2>Sua conta</h2>
-      <button class="admin-btn secondary" onclick="trocarSenha()">Trocar minha senha</button>
-      <button class="admin-btn secondary" onclick="sair()">Sair</button>
-      <p id="senha-msg" class="success-msg"></p>
-    </div>
+  <nav id="admin-tabs" class="admin-tabs" style="display:none">
+    <button type="button" class="admin-tab ativo" data-aba="conteudo" onclick="mostrarAba('conteudo')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="1"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>
+      Conteúdo
+    </button>
+    <button type="button" class="admin-tab" data-aba="portfolio" onclick="mostrarAba('portfolio')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+      Portfólio
+    </button>
+    <button type="button" class="admin-tab" data-aba="contato" onclick="mostrarAba('contato')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
+      Contato
+    </button>
+    <button type="button" class="admin-tab" data-aba="conta" onclick="mostrarAba('conta')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+      Conta
+    </button>
+  </nav>
+</div>
 
+<div id="fotos-modal" class="fotos-modal" style="display:none">
+  <div class="fotos-modal-inner">
+    <button class="fotos-modal-close" onclick="fecharGerenciarFotos()" type="button" aria-label="Fechar">×</button>
+    <h2 style="padding-right:24px;">Fotos do projeto</h2>
+    <div class="fotos-modal-grid" id="fotos-modal-grid"></div>
+    <div class="admin-field">
+      <label>Adicionar mais fotos</label>
+      <input type="file" id="fotos-modal-input" accept="image/*" multiple>
+    </div>
+    <button class="admin-btn" onclick="adicionarFotosAoProjeto()">Enviar fotos</button>
+    <p id="fotos-modal-status" style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;"></p>
   </div>
 </div>
 
