@@ -210,8 +210,56 @@ function carregarTextos() {
     });
     aplicarTema(temaSelecionado);
     aplicarEscalaFonte(fonteSelecionada);
+    mostrarPreviewBanner(data.bannerUrl || '');
 
     try { localStorage.setItem(CACHE_CONFIG_CHAVE, JSON.stringify(data)); } catch (e) {}
+  });
+}
+
+function mostrarPreviewBanner(url) {
+  const wrap = document.getElementById('banner-preview-wrap');
+  wrap.innerHTML = url
+    ? '<img src="' + url + '" style="max-width:100%;display:block;margin-bottom:10px;border-radius:8px;border:1px solid var(--border);">'
+    : '<p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;">Nenhum banner definido ainda.</p>';
+}
+
+function salvarBanner() {
+  const statusEl = document.getElementById('banner-status');
+  const msgEl = document.getElementById('banner-msg');
+  const arquivoInput = document.getElementById('banner-foto');
+  const arquivo = arquivoInput.files[0];
+
+  if (!arquivo) { msgEl.textContent = 'Escolha uma foto primeiro.'; return; }
+  if (!textosDocId) { msgEl.textContent = 'Salve os textos principais uma vez antes do banner.'; return; }
+
+  statusEl.textContent = 'Enviando banner...';
+  uploadImagemImgBB(arquivo).then(function(resultado) {
+    return db.collection('conteudo').doc(textosDocId).set({
+      bannerUrl: resultado.url,
+      bannerDeleteUrl: resultado.deleteUrl
+    }, { merge: true });
+  }).then(function() {
+    statusEl.textContent = '';
+    arquivoInput.value = '';
+    msgEl.textContent = 'Banner salvo!';
+    setTimeout(() => { msgEl.textContent = ''; }, 3000);
+    carregarTextos();
+  }).catch(function(erro) {
+    statusEl.textContent = '';
+    alert('Erro ao enviar o banner: ' + erro);
+  });
+}
+
+function removerBanner() {
+  if (!textosDocId) return;
+  if (!confirm('Remover o banner do site?')) return;
+  db.collection('conteudo').doc(textosDocId).get().then(function(doc) {
+    const data = doc.data();
+    if (data.bannerDeleteUrl) tentarApagarDoImgBB(data.bannerDeleteUrl);
+    return db.collection('conteudo').doc(textosDocId).set({ bannerUrl: '', bannerDeleteUrl: '' }, { merge: true });
+  }).then(function() {
+    document.getElementById('banner-msg').textContent = 'Banner removido.';
+    carregarTextos();
   });
 }
 
