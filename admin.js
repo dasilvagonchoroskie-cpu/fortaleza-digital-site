@@ -1,14 +1,86 @@
 // ===== CONFIGURAÇÃO DO IMGBB (upload automático de fotos) =====
-// Evandro: troque o texto abaixo pela sua chave real do ImgBB.
 const IMGBB_API_KEY = '61956ffcfe2f0d78692db113027c5319';
+
+// Temas prontos — contraste já conferido (mesma lista de script.js)
+const TEMAS = {
+  'teal-escuro':      { bg: '#0B1220', texto: '#F1F5F9', destaque: '#2DD4BF' },
+  'azul-cibernetico': { bg: '#0A0E1A', texto: '#E8EEF7', destaque: '#4C8DFF' },
+  'verde-seguranca':  { bg: '#0A140D', texto: '#E5F2E8', destaque: '#4ADE80' },
+  'grafite':          { bg: '#161819', texto: '#F0F0F0', destaque: '#2DD4BF' },
+  'claro-corporativo':{ bg: '#F4F6F9', texto: '#12181F', destaque: '#0F6E63' },
+  'roxo-tech':        { bg: '#120A1A', texto: '#F0EAF5', destaque: '#9D6FE0' }
+};
+const TEMA_PADRAO = 'teal-escuro';
+const CACHE_CONFIG_CHAVE = 'fortaleza_config_cache';
+
+let temaSelecionado = TEMA_PADRAO;
+let fonteSelecionada = '1';
+
+function ajustarCor(hex, quantidade) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(function(c) { return c + c; }).join('');
+  const num = parseInt(hex, 16);
+  let r = (num >> 16) + quantidade;
+  let g = ((num >> 8) & 0x00FF) + quantidade;
+  let b = (num & 0x0000FF) + quantidade;
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+  return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1).toUpperCase();
+}
+
+function aplicarTema(nome) {
+  const tema = TEMAS[nome] || TEMAS[TEMA_PADRAO];
+  const raiz = document.documentElement.style;
+  raiz.setProperty('--bg', tema.bg);
+  raiz.setProperty('--surface', ajustarCor(tema.bg, 14));
+  raiz.setProperty('--surface-2', ajustarCor(tema.bg, 8));
+  raiz.setProperty('--border', ajustarCor(tema.bg, 40));
+  raiz.setProperty('--danger-bg', ajustarCor(tema.bg, 12));
+  raiz.setProperty('--success-bg', ajustarCor(tema.bg, 12));
+  raiz.setProperty('--text', tema.texto);
+  raiz.setProperty('--text-muted', ajustarCor(tema.texto, -60));
+  raiz.setProperty('--accent', tema.destaque);
+  raiz.setProperty('--accent-dim', ajustarCor(tema.destaque, -35));
+}
+
+function aplicarEscalaFonte(valor) {
+  document.documentElement.style.setProperty('--escala-fonte', valor);
+}
+
+function escolherTema(nome) {
+  temaSelecionado = nome;
+  document.querySelectorAll('.tema-swatch').forEach(function(btn) {
+    btn.classList.toggle('ativo', btn.dataset.tema === nome);
+  });
+  aplicarTema(nome);
+}
+
+function escolherFonte(valor) {
+  fonteSelecionada = valor;
+  document.querySelectorAll('.fonte-opcao').forEach(function(btn) {
+    btn.classList.toggle('ativo', btn.dataset.fonte === valor);
+  });
+  aplicarEscalaFonte(valor);
+}
+
+// Aplica o tema salvo em cache local imediatamente (antes do Firestore
+// responder) — mesma chave usada em script.js, então trocar entre o
+// site e o painel já vem com a cor certa.
+try {
+  const emCache = localStorage.getItem(CACHE_CONFIG_CHAVE);
+  if (emCache) {
+    const dataCache = JSON.parse(emCache);
+    temaSelecionado = dataCache.tema || TEMA_PADRAO;
+    fonteSelecionada = dataCache.escalaFonte || '1';
+    aplicarTema(temaSelecionado);
+    aplicarEscalaFonte(fonteSelecionada);
+  }
+} catch (e) {}
 
 function uploadImagemImgBB(arquivo) {
   return new Promise(function(resolve, reject) {
     if (!arquivo) { reject('Nenhum arquivo selecionado.'); return; }
-    if (!IMGBB_API_KEY) {
-      reject('Chave do ImgBB ainda não configurada. Peça pro Claude te ajudar a adicionar.');
-      return;
-    }
     const formData = new FormData();
     formData.append('image', arquivo);
     fetch('https://api.imgbb.com/1/upload?key=' + IMGBB_API_KEY, {
@@ -27,13 +99,20 @@ function uploadImagemImgBB(arquivo) {
   });
 }
 
-// Tenta apagar a foto do ImgBB usando o link de exclusão salvo.
-// Não é uma API oficial do ImgBB, então não há garantia de que sempre funcione.
+// Envia várias fotos em sequência e devolve um array [{url, deleteUrl}, ...]
+function uploadVariasImagensImgBB(arquivos) {
+  const lista = Array.prototype.slice.call(arquivos);
+  let resultados = [];
+  return lista.reduce(function(promessaAnterior, arquivo) {
+    return promessaAnterior.then(function() {
+      return uploadImagemImgBB(arquivo).then(function(r) { resultados.push(r); });
+    });
+  }, Promise.resolve()).then(function() { return resultados; });
+}
+
 function tentarApagarDoImgBB(deleteUrl) {
   if (!deleteUrl) return;
-  fetch(deleteUrl, { mode: 'no-cors' }).catch(function() {
-    // Silencioso: se falhar, a foto só continua guardada no ImgBB sem uso, sem custo.
-  });
+  fetch(deleteUrl, { mode: 'no-cors' }).catch(function() {});
 }
 
 // ----- LOGIN -----
@@ -41,6 +120,8 @@ auth.onAuthStateChanged(function(user) {
   if (user) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('painel').style.display = 'block';
+    document.getElementById('admin-tabs').style.display = 'flex';
+    mostrarAba('conteudo');
     carregarTextos();
     carregarServicos();
     carregarPortfolio();
@@ -49,8 +130,19 @@ auth.onAuthStateChanged(function(user) {
   } else {
     document.getElementById('login-screen').style.display = 'block';
     document.getElementById('painel').style.display = 'none';
+    document.getElementById('admin-tabs').style.display = 'none';
   }
 });
+
+function mostrarAba(nome) {
+  ['conteudo', 'portfolio', 'contato', 'conta'].forEach(function(aba) {
+    document.getElementById('painel-' + aba).style.display = (aba === nome) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.admin-tab').forEach(function(btn) {
+    btn.classList.toggle('ativo', btn.dataset.aba === nome);
+  });
+  window.scrollTo(0, 0);
+}
 
 function fazerLogin() {
   const email = document.getElementById('login-email').value.trim();
@@ -59,8 +151,25 @@ function fazerLogin() {
   erroEl.textContent = '';
 
   auth.signInWithEmailAndPassword(email, senha).catch(function(error) {
-    erroEl.textContent = 'E-mail ou senha incorretos.';
+    erroEl.textContent = 'Erro (' + error.code + '): ' + error.message;
     console.error(error);
+  });
+}
+
+function recuperarSenha() {
+  const erroEl = document.getElementById('login-erro');
+  let email = document.getElementById('login-email').value.trim();
+  if (!email) {
+    email = prompt('Digite o e-mail cadastrado do painel:');
+    if (!email) return;
+  }
+  erroEl.textContent = '';
+  auth.sendPasswordResetEmail(email).then(function() {
+    erroEl.style.color = 'var(--success)';
+    erroEl.textContent = 'Enviamos um link pra ' + email + '. Abra o e-mail e siga o link pra criar uma senha nova.';
+  }).catch(function(error) {
+    erroEl.style.color = '';
+    erroEl.textContent = 'Erro (' + error.code + '): ' + error.message;
   });
 }
 
@@ -78,7 +187,7 @@ function trocarSenha() {
   });
 }
 
-// ----- TEXTOS GERAIS DO SITE -----
+// ----- TEXTOS GERAIS DO SITE (e aparência, guardada no mesmo documento) -----
 let textosDocId = null;
 
 function carregarTextos() {
@@ -90,6 +199,19 @@ function carregarTextos() {
     document.getElementById('texto-titulo').value = data.titulo || '';
     document.getElementById('texto-descricao').value = data.descricao || '';
     document.getElementById('texto-botao').value = data.botao || '';
+
+    temaSelecionado = data.tema || TEMA_PADRAO;
+    fonteSelecionada = data.escalaFonte || '1';
+    document.querySelectorAll('.tema-swatch').forEach(function(btn) {
+      btn.classList.toggle('ativo', btn.dataset.tema === temaSelecionado);
+    });
+    document.querySelectorAll('.fonte-opcao').forEach(function(btn) {
+      btn.classList.toggle('ativo', btn.dataset.fonte === fonteSelecionada);
+    });
+    aplicarTema(temaSelecionado);
+    aplicarEscalaFonte(fonteSelecionada);
+
+    try { localStorage.setItem(CACHE_CONFIG_CHAVE, JSON.stringify(data)); } catch (e) {}
   });
 }
 
@@ -110,9 +232,30 @@ function salvarTextos() {
     return;
   }
 
-  db.collection('conteudo').doc(textosDocId).update(dados).then(function() {
+  db.collection('conteudo').doc(textosDocId).set(dados, { merge: true }).then(function() {
     document.getElementById('textos-msg').textContent = 'Textos salvos!';
     setTimeout(() => { document.getElementById('textos-msg').textContent = ''; }, 3000);
+  }).catch(function(error) {
+    alert('Erro ao salvar: ' + error.message);
+  });
+}
+
+function salvarAparencia() {
+  const msgEl = document.getElementById('aparencia-msg');
+  const dados = { tema: temaSelecionado, escalaFonte: fonteSelecionada };
+
+  if (!textosDocId) {
+    db.collection('conteudo').add(dados).then(function(docRef) {
+      textosDocId = docRef.id;
+      msgEl.textContent = 'Aparência salva!';
+      setTimeout(() => { msgEl.textContent = ''; }, 3000);
+    });
+    return;
+  }
+
+  db.collection('conteudo').doc(textosDocId).set(dados, { merge: true }).then(function() {
+    msgEl.textContent = 'Aparência salva!';
+    setTimeout(() => { msgEl.textContent = ''; }, 3000);
   }).catch(function(error) {
     alert('Erro ao salvar: ' + error.message);
   });
@@ -182,22 +325,24 @@ function apagarServico(id) {
   db.collection('serviços').doc(id).delete().then(carregarServicos);
 }
 
-// ----- PORTFÓLIO -----
+// ----- PORTFÓLIO (agora com várias fotos por projeto) -----
 function carregarPortfolio() {
   db.collection('portfolio').get().then(function(snapshot) {
     const container = document.getElementById('lista-portfolio');
     container.innerHTML = '';
     snapshot.forEach(function(doc) {
       const data = doc.data();
+      const qtdFotos = Array.isArray(data.fotos) ? data.fotos.length : (data.imagem ? 1 : 0);
       const row = document.createElement('div');
       row.className = 'item-row';
       row.innerHTML = `
         <div class="item-info">
           <strong>${escapeHtml(data.titulo || '')}</strong>
-          <span>${escapeHtml(data.descricao || '')}</span>
+          <span>${escapeHtml(data.descricao || '')} — ${qtdFotos} foto(s)</span>
         </div>
         <div class="item-actions">
-          <button class="admin-btn secondary" onclick="editarProjeto('${doc.id}')">Editar</button>
+          <button class="admin-btn secondary" onclick="editarProjeto('${doc.id}')">Editar texto</button>
+          <button class="admin-btn secondary" onclick="abrirGerenciarFotos('${doc.id}')">Gerenciar fotos</button>
           <button class="admin-btn danger" onclick="apagarProjeto('${doc.id}')">Apagar</button>
         </div>
       `;
@@ -209,13 +354,13 @@ function carregarPortfolio() {
 function adicionarProjeto() {
   const titulo = document.getElementById('novo-projeto-titulo').value.trim();
   const descricao = document.getElementById('novo-projeto-descricao').value.trim();
-  const arquivoInput = document.getElementById('novo-projeto-imagem-arquivo');
-  const statusEl = document.getElementById('novo-projeto-imagem-status');
+  const arquivoInput = document.getElementById('novo-projeto-fotos');
+  const statusEl = document.getElementById('novo-projeto-fotos-status');
 
   if (!titulo) { alert('Preencha o título.'); return; }
 
-  function salvarNoFirestore(imagemUrl, deleteUrl) {
-    db.collection('portfolio').add({ titulo, descricao, imagem: imagemUrl || '', imagemDeleteUrl: deleteUrl || '' }).then(function() {
+  function salvarNoFirestore(fotos) {
+    db.collection('portfolio').add({ titulo, descricao, fotos: fotos || [] }).then(function() {
       document.getElementById('novo-projeto-titulo').value = '';
       document.getElementById('novo-projeto-descricao').value = '';
       arquivoInput.value = '';
@@ -226,18 +371,18 @@ function adicionarProjeto() {
     });
   }
 
-  const arquivo = arquivoInput.files[0];
-  if (arquivo) {
-    statusEl.textContent = 'Enviando foto...';
-    uploadImagemImgBB(arquivo).then(function(resultado) {
-      statusEl.textContent = 'Foto enviada!';
-      salvarNoFirestore(resultado.url, resultado.deleteUrl);
+  const arquivos = arquivoInput.files;
+  if (arquivos && arquivos.length) {
+    statusEl.textContent = 'Enviando ' + arquivos.length + ' foto(s)...';
+    uploadVariasImagensImgBB(arquivos).then(function(resultados) {
+      statusEl.textContent = 'Fotos enviadas!';
+      salvarNoFirestore(resultados);
     }).catch(function(erro) {
       statusEl.textContent = '';
-      alert('Erro ao enviar a foto: ' + erro);
+      alert('Erro ao enviar as fotos: ' + erro);
     });
   } else {
-    salvarNoFirestore('', '');
+    salvarNoFirestore([]);
   }
 }
 
@@ -257,14 +402,91 @@ function editarProjeto(id) {
 }
 
 function apagarProjeto(id) {
-  if (!confirm('Tem certeza que quer apagar este projeto?')) return;
+  if (!confirm('Tem certeza que quer apagar este projeto? Todas as fotos dele somem também.')) return;
   db.collection('portfolio').doc(id).get().then(function(doc) {
     const data = doc.data();
-    if (data && data.imagemDeleteUrl) {
-      tentarApagarDoImgBB(data.imagemDeleteUrl);
-    }
+    const fotos = Array.isArray(data.fotos) ? data.fotos : (data.imagem ? [{ url: data.imagem, deleteUrl: data.imagemDeleteUrl }] : []);
+    fotos.forEach(function(f) { if (f.deleteUrl) tentarApagarDoImgBB(f.deleteUrl); });
     return db.collection('portfolio').doc(id).delete();
   }).then(carregarPortfolio);
+}
+
+// ----- Gerenciador de fotos de um projeto (modal) -----
+let projetoFotosId = null;
+
+function abrirGerenciarFotos(id) {
+  projetoFotosId = id;
+  db.collection('portfolio').doc(id).get().then(function(doc) {
+    renderizarGradeFotos(doc.data());
+    document.getElementById('fotos-modal-input').value = '';
+    document.getElementById('fotos-modal-status').textContent = '';
+    document.getElementById('fotos-modal').style.display = 'flex';
+  });
+}
+
+function renderizarGradeFotos(data) {
+  const fotos = Array.isArray(data.fotos) ? data.fotos : (data.imagem ? [{ url: data.imagem, deleteUrl: data.imagemDeleteUrl }] : []);
+  const grid = document.getElementById('fotos-modal-grid');
+  if (!fotos.length) {
+    grid.innerHTML = '<p style="font-size:0.8125rem;color:var(--text-muted);grid-column:1/-1;">Nenhuma foto ainda.</p>';
+    return;
+  }
+  grid.innerHTML = fotos.map(function(f, i) {
+    return `<div class="fotos-modal-item">
+      <img src="${escapeHtml(f.url)}" alt="">
+      <button type="button" onclick="removerFotoDoProjeto(${i})" aria-label="Remover">×</button>
+    </div>`;
+  }).join('');
+}
+
+function removerFotoDoProjeto(indice) {
+  if (!projetoFotosId) return;
+  if (!confirm('Remover esta foto do projeto?')) return;
+  db.collection('portfolio').doc(projetoFotosId).get().then(function(doc) {
+    const data = doc.data();
+    const fotos = Array.isArray(data.fotos) ? data.fotos.slice() : (data.imagem ? [{ url: data.imagem, deleteUrl: data.imagemDeleteUrl }] : []);
+    const removida = fotos.splice(indice, 1)[0];
+    if (removida && removida.deleteUrl) tentarApagarDoImgBB(removida.deleteUrl);
+    return db.collection('portfolio').doc(projetoFotosId).set({ fotos: fotos, imagem: firebase.firestore.FieldValue.delete(), imagemDeleteUrl: firebase.firestore.FieldValue.delete() }, { merge: true });
+  }).then(function() {
+    return db.collection('portfolio').doc(projetoFotosId).get();
+  }).then(function(doc) {
+    renderizarGradeFotos(doc.data());
+    carregarPortfolio();
+  });
+}
+
+function adicionarFotosAoProjeto() {
+  if (!projetoFotosId) return;
+  const input = document.getElementById('fotos-modal-input');
+  const statusEl = document.getElementById('fotos-modal-status');
+  const arquivos = input.files;
+  if (!arquivos || !arquivos.length) { alert('Escolha ao menos uma foto primeiro.'); return; }
+
+  statusEl.textContent = 'Enviando ' + arquivos.length + ' foto(s)...';
+  uploadVariasImagensImgBB(arquivos).then(function(novasFotos) {
+    return db.collection('portfolio').doc(projetoFotosId).get().then(function(doc) {
+      const data = doc.data();
+      const fotosAtuais = Array.isArray(data.fotos) ? data.fotos : (data.imagem ? [{ url: data.imagem, deleteUrl: data.imagemDeleteUrl }] : []);
+      const fotosFinais = fotosAtuais.concat(novasFotos);
+      return db.collection('portfolio').doc(projetoFotosId).set({ fotos: fotosFinais, imagem: firebase.firestore.FieldValue.delete(), imagemDeleteUrl: firebase.firestore.FieldValue.delete() }, { merge: true });
+    });
+  }).then(function() {
+    statusEl.textContent = 'Fotos adicionadas!';
+    input.value = '';
+    return db.collection('portfolio').doc(projetoFotosId).get();
+  }).then(function(doc) {
+    renderizarGradeFotos(doc.data());
+    carregarPortfolio();
+  }).catch(function(erro) {
+    statusEl.textContent = '';
+    alert('Erro ao enviar as fotos: ' + erro);
+  });
+}
+
+function fecharGerenciarFotos() {
+  document.getElementById('fotos-modal').style.display = 'none';
+  projetoFotosId = null;
 }
 
 // ----- CONTATO GERAL (WhatsApp flutuante + e-mail principal) -----
