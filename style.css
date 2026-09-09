@@ -68,6 +68,21 @@ a { color: inherit; text-decoration: none; }
 .site-nav a { color: var(--text-muted); }
 .site-nav a:hover { color: var(--accent); }
 
+/* Banner (largura total, imagem inteira, sem cortar) */
+.banner-wrap {
+  width: 100%;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.banner-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 440px;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
 /* Hero */
 .hero {
   padding: 72px 0 56px;
