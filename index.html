@@ -6,6 +6,48 @@
 <title>Fortaleza Digital — Segurança e Tecnologia</title>
 <meta name="description" content="Criação de sites, aplicativos e proteção digital para o seu negócio.">
 <link rel="stylesheet" href="style.css">
+<script>
+(function() {
+  try {
+    var c = localStorage.getItem('fortaleza_config_cache');
+    if (!c) return;
+    var config = JSON.parse(c);
+    var TEMAS = {
+      'teal-escuro':      { bg: '#0B1220', texto: '#F1F5F9', destaque: '#2DD4BF' },
+      'azul-cibernetico': { bg: '#0A0E1A', texto: '#E8EEF7', destaque: '#4C8DFF' },
+      'verde-seguranca':  { bg: '#0A140D', texto: '#E5F2E8', destaque: '#4ADE80' },
+      'grafite':          { bg: '#161819', texto: '#F0F0F0', destaque: '#2DD4BF' },
+      'claro-corporativo':{ bg: '#F4F6F9', texto: '#12181F', destaque: '#0F6E63' },
+      'roxo-tech':        { bg: '#120A1A', texto: '#F0EAF5', destaque: '#9D6FE0' }
+    };
+    function ajustarCor(hex, quantidade) {
+      hex = hex.replace('#', '');
+      if (hex.length === 3) hex = hex.split('').map(function(ch) { return ch + ch; }).join('');
+      var num = parseInt(hex, 16);
+      var r = (num >> 16) + quantidade;
+      var g = ((num >> 8) & 0x00FF) + quantidade;
+      var b = (num & 0x0000FF) + quantidade;
+      r = Math.max(0, Math.min(255, r));
+      g = Math.max(0, Math.min(255, g));
+      b = Math.max(0, Math.min(255, b));
+      return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1).toUpperCase();
+    }
+    var tema = TEMAS[config.tema] || TEMAS['teal-escuro'];
+    var raiz = document.documentElement.style;
+    raiz.setProperty('--bg', tema.bg);
+    raiz.setProperty('--surface', ajustarCor(tema.bg, 14));
+    raiz.setProperty('--surface-2', ajustarCor(tema.bg, 8));
+    raiz.setProperty('--border', ajustarCor(tema.bg, 40));
+    raiz.setProperty('--danger-bg', ajustarCor(tema.bg, 12));
+    raiz.setProperty('--success-bg', ajustarCor(tema.bg, 12));
+    raiz.setProperty('--text', tema.texto);
+    raiz.setProperty('--text-muted', ajustarCor(tema.texto, -60));
+    raiz.setProperty('--accent', tema.destaque);
+    raiz.setProperty('--accent-dim', ajustarCor(tema.destaque, -35));
+    raiz.setProperty('--escala-fonte', config.escalaFonte || '1');
+  } catch (e) {}
+})();
+</script>
 </head>
 <body>
 
@@ -58,7 +100,7 @@
     <div class="container">
       <p class="eyebrow">Projetos</p>
       <h2>Portfólio</h2>
-      <div id="portfolio-lista">
+      <div class="portfolio-grid" id="portfolio-lista">
         <p class="loading-msg">Carregando portfólio...</p>
       </div>
     </div>
@@ -95,6 +137,15 @@
 <a id="whatsapp-btn" href="#" class="whatsapp-float" target="_blank" rel="noopener" aria-label="Falar no WhatsApp" style="display:none">
   <svg viewBox="0 0 24 24" width="28" height="28" fill="#fff"><path d="M20.5 3.5A11.8 11.8 0 0 0 12 0C5.4 0 0 5.4 0 12c0 2.1.6 4.2 1.6 6L0 24l6.2-1.6c1.7.9 3.7 1.4 5.8 1.4 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.3ZM12 21.8c-1.9 0-3.7-.5-5.3-1.4l-.4-.2-3.7 1 1-3.6-.2-.4A9.7 9.7 0 0 1 2.2 12c0-5.4 4.4-9.8 9.8-9.8 2.6 0 5.1 1 6.9 2.9a9.7 9.7 0 0 1 2.9 6.9c0 5.4-4.4 9.8-9.8 9.8Zm5.4-7.3c-.3-.1-1.7-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.1-.2.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z"/></svg>
 </a>
+
+<div id="lightbox" class="lightbox" style="display:none" onclick="if(event.target===this) fecharLightbox()">
+  <div class="lightbox-inner">
+    <button class="lightbox-close" onclick="fecharLightbox()" type="button" aria-label="Fechar">×</button>
+    <h3 id="lightbox-titulo"></h3>
+    <p id="lightbox-descricao"></p>
+    <div class="lightbox-fotos" id="lightbox-fotos"></div>
+  </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
