@@ -99,7 +99,7 @@ function uploadImagemImgBB(arquivo) {
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data && data.ok && data.url) {
-          resolve({ url: data.url, deleteUrl: data.deleteUrl || '' });
+          resolve({ url: data.url, thumbUrl: data.thumbUrl || data.url, deleteUrl: data.deleteUrl || '' });
         } else {
           reject((data && data.motivo) || 'Erro ao enviar imagem.');
         }
