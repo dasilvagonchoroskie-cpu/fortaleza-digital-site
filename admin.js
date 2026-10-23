@@ -174,6 +174,7 @@ auth.onAuthStateChanged(function(user) {
     carregarTextos();
     carregarServicos();
     carregarPortfolio();
+    carregarAplicativos();
     carregarContato();
     carregarEquipe();
   } else {
@@ -184,7 +185,7 @@ auth.onAuthStateChanged(function(user) {
 });
 
 function mostrarAba(nome) {
-  ['conteudo', 'portfolio', 'contato', 'conta'].forEach(function(aba) {
+  ['conteudo', 'portfolio', 'aplicativos', 'contato', 'conta'].forEach(function(aba) {
     document.getElementById('painel-' + aba).style.display = (aba === nome) ? 'block' : 'none';
   });
   document.querySelectorAll('.admin-tab').forEach(function(btn) {
@@ -429,6 +430,7 @@ function carregarPortfolio() {
     container.innerHTML = '';
     snapshot.forEach(function(doc) {
       const data = doc.data();
+      if (data.tipo === 'app') return; // apps ficam na aba Apps
       const qtdFotos = Array.isArray(data.fotos) ? data.fotos.length : (data.imagem ? 1 : 0);
       const row = document.createElement('div');
       row.className = 'item-row';
@@ -718,4 +720,364 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// ===================== LOJA DE APLICATIVOS (APKs) =====================
+// Os apps ficam na coleção "portfolio" com tipo: 'app' — assim usam as
+// mesmas regras de acesso do portfólio, que já funcionam.
+// O arquivo APK vai para a pasta /apks deste mesmo repositório do GitHub
+// (de onde o site é publicado), usando uma chave do GitHub que fica
+// guardada SÓ no aparelho do dono (nunca no código nem no Firestore).
+const GH_API = 'https://api.github.com';
+const GH_REPO = 'dasilvagonchoroskie-cpu/fortaleza-digital-site';
+const GH_TOKEN_CHAVE = 'fortaleza_github_token';
+const SITE_URL = 'https://fortalezadigitalsecurity.com.br/';
+const APK_LIMITE_BYTES = 95 * 1024 * 1024; // GitHub não aceita arquivo acima de 100 MB
+
+let APPS_ADMIN = {};
+let appEditandoId = null;
+
+function lerTokenGitHub() {
+  try { return localStorage.getItem(GH_TOKEN_CHAVE) || ''; } catch (e) { return ''; }
+}
+
+function atualizarStatusToken() {
+  document.getElementById('gh-status').textContent = lerTokenGitHub()
+    ? 'Chave configurada neste aparelho. Já dá para enviar APKs.'
+    : 'Nenhuma chave neste aparelho. Sem ela dá para cadastrar o app, mas não para enviar o arquivo APK.';
+}
+
+function ghMensagemErro(status, dados) {
+  if (status === 401) return 'A chave do GitHub não foi aceita (vencida ou copiada errada). Crie uma nova e salve de novo.';
+  if (status === 403 || status === 404) return 'A chave do GitHub não tem permissão para gravar no site. Confira o passo das permissões: Contents ("Conteúdo") em Read and write ("Leitura e escrita").';
+  return 'O GitHub respondeu erro ' + status + ((dados && dados.message) ? ': ' + dados.message : '');
+}
+
+async function ghReq(token, metodo, caminho, corpo) {
+  const res = await fetch(GH_API + caminho, {
+    method: metodo,
+    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    body: corpo ? JSON.stringify(corpo) : undefined
+  });
+  const texto = await res.text();
+  let dados = null;
+  try { dados = texto ? JSON.parse(texto) : null; } catch (e) {}
+  if (!res.ok) throw new Error(ghMensagemErro(res.status, dados));
+  return dados;
+}
+
+async function salvarTokenGitHub() {
+  const campo = document.getElementById('gh-token');
+  const token = campo.value.trim();
+  if (!token) { alert('Cole a chave primeiro.'); return; }
+  document.getElementById('gh-status').textContent = 'Conferindo a chave...';
+  try {
+    await ghReq(token, 'GET', '/repos/' + GH_REPO);
+    localStorage.setItem(GH_TOKEN_CHAVE, token);
+    campo.value = '';
+    atualizarStatusToken();
+    alert('Chave salva! Agora você já pode enviar APKs.');
+  } catch (e) {
+    document.getElementById('gh-status').textContent = e.message;
+  }
+}
+
+function removerTokenGitHub() {
+  if (!confirm('Remover a chave do GitHub deste aparelho?')) return;
+  try { localStorage.removeItem(GH_TOKEN_CHAVE); } catch (e) {}
+  atualizarStatusToken();
+}
+
+function lerArquivoBase64(arquivo) {
+  return new Promise(function(resolve, reject) {
+    const leitor = new FileReader();
+    leitor.onload = function() { resolve(String(leitor.result).split(',')[1]); };
+    leitor.onerror = function() { reject(new Error('Não consegui ler o arquivo APK.')); };
+    leitor.readAsDataURL(arquivo);
+  });
+}
+
+// Envia o conteúdo do APK ao GitHub mostrando o progresso
+function ghEnviarBlob(token, base64, aoProgredir) {
+  return new Promise(function(resolve, reject) {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', GH_API + '/repos/' + GH_REPO + '/git/blobs');
+    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+    xhr.setRequestHeader('Accept', 'application/vnd.github+json');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.upload.onprogress = function(e) { if (e.lengthComputable && aoProgredir) aoProgredir(e.loaded / e.total); };
+    xhr.onload = function() {
+      let dados = null;
+      try { dados = JSON.parse(xhr.responseText); } catch (e) {}
+      if (xhr.status === 201 && dados && dados.sha) resolve(dados.sha);
+      else reject(new Error(ghMensagemErro(xhr.status, dados)));
+    };
+    xhr.onerror = function() { reject(new Error('A conexão com o GitHub caiu durante o envio. Tente de novo com internet mais estável.')); };
+    xhr.send(JSON.stringify({ content: base64, encoding: 'base64' }));
+  });
+}
+
+// Grava (sha) ou apaga (sha: null) arquivos do site em um único commit
+async function ghCommit(token, mudancas, mensagem) {
+  const repo = await ghReq(token, 'GET', '/repos/' + GH_REPO);
+  const ramo = repo.default_branch || 'main';
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    const ref = await ghReq(token, 'GET', '/repos/' + GH_REPO + '/git/ref/heads/' + ramo);
+    const commitAtual = ref.object.sha;
+    const commit = await ghReq(token, 'GET', '/repos/' + GH_REPO + '/git/commits/' + commitAtual);
+    const arvore = await ghReq(token, 'POST', '/repos/' + GH_REPO + '/git/trees', {
+      base_tree: commit.tree.sha,
+      tree: mudancas.map(function(m) { return { path: m.path, mode: '100644', type: 'blob', sha: m.sha }; })
+    });
+    const novo = await ghReq(token, 'POST', '/repos/' + GH_REPO + '/git/commits', {
+      message: mensagem, tree: arvore.sha, parents: [commitAtual]
+    });
+    try {
+      await ghReq(token, 'PATCH', '/repos/' + GH_REPO + '/git/refs/heads/' + ramo, { sha: novo.sha });
+      return;
+    } catch (e) {
+      if (tentativa === 2) throw e; // alguém gravou ao mesmo tempo: tenta de novo
+    }
+  }
+}
+
+function slugApp(texto) {
+  return String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'app';
+}
+
+function caminhoApkUnico(nome, idAtual) {
+  const base = 'apks/' + slugApp(nome);
+  const usados = Object.keys(APPS_ADMIN).filter(function(id) { return id !== idAtual; })
+    .map(function(id) { return APPS_ADMIN[id].apkCaminho; });
+  let caminho = base + '.apk', n = 2;
+  while (usados.indexOf(caminho) !== -1) { caminho = base + '-' + n + '.apk'; n++; }
+  return caminho;
+}
+
+function lerPreco(texto) {
+  let t = String(texto || '').replace(/R\$|\s/gi, '');
+  if (!t) return null;
+  if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+  const n = Number(t);
+  if (isNaN(n) || n < 0) throw new Error('preço inválido');
+  return Math.round(n * 100) / 100;
+}
+
+function precoTexto(d) {
+  if (typeof d.preco === 'number' && d.preco > 0) return d.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  if (d.preco === 0) return 'Grátis';
+  return 'Consulte';
+}
+
+function tamanhoTexto(bytes) {
+  return bytes ? (bytes / 1048576).toFixed(1).replace('.', ',') + ' MB' : '';
+}
+
+function ordenarApps(a, b) {
+  const oa = Number(a.ordem) || 0, ob = Number(b.ordem) || 0;
+  return oa !== ob ? oa - ob : String(a.nome || '').localeCompare(String(b.nome || ''));
+}
+
+function carregarAplicativos() {
+  atualizarStatusToken();
+  const container = document.getElementById('lista-aplicativos');
+  db.collection('portfolio').where('tipo', '==', 'app').get().then(function(snapshot) {
+    APPS_ADMIN = {};
+    const lista = [];
+    snapshot.forEach(function(doc) {
+      APPS_ADMIN[doc.id] = doc.data();
+      lista.push(Object.assign({ _id: doc.id }, doc.data()));
+    });
+    lista.sort(ordenarApps);
+    if (!lista.length) {
+      container.innerHTML = '<p class="admin-hint">Nenhum aplicativo cadastrado ainda. Use o formulário abaixo.</p>';
+      return;
+    }
+    container.innerHTML = '';
+    lista.forEach(function(d) {
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = `
+        <div class="item-info">
+          <strong>${escapeHtml(d.nome || '')}${d.ativo === false ? ' (escondido do site)' : ''}</strong>
+          <span>${escapeHtml(precoTexto(d))} · versão ${escapeHtml(d.versao || '-')} · ${d.apkCaminho ? 'APK ' + tamanhoTexto(d.apkTamanho) : 'sem APK enviado'}</span>
+        </div>
+        <div class="item-actions">
+          <button class="admin-btn secondary" onclick="editarAplicativo('${d._id}')">Editar</button>
+          ${d.apkCaminho ? `<button class="admin-btn secondary" onclick="copiarLinkApk('${d._id}')">Copiar link do APK</button>` : ''}
+          <button class="admin-btn danger" onclick="apagarAplicativo('${d._id}')">Apagar</button>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+  }).catch(function(e) {
+    container.innerHTML = '<p class="admin-hint">Erro ao carregar: ' + escapeHtml(e.message) + '</p>';
+  });
+}
+
+function statusApp(texto) { document.getElementById('app-status').textContent = texto; }
+
+function progressoApp(fracao) {
+  const caixa = document.getElementById('app-progresso');
+  if (fracao === null) { caixa.style.display = 'none'; return; }
+  caixa.style.display = 'block';
+  document.getElementById('app-progresso-barra').style.width = Math.round(fracao * 100) + '%';
+  statusApp('Enviando o APK... ' + Math.round(fracao * 100) + '%');
+}
+
+function limparFormularioApp(manterStatus) {
+  appEditandoId = null;
+  ['app-nome', 'app-descricao', 'app-preco', 'app-preco-detalhe', 'app-versao', 'app-ordem', 'app-apk', 'app-icone', 'app-prints']
+    .forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('app-ativo').checked = true;
+  document.getElementById('app-download').checked = false;
+  document.getElementById('app-apk-info').textContent = '';
+  document.getElementById('app-prints-info').textContent = '';
+  document.getElementById('app-form-titulo').textContent = 'Adicionar aplicativo';
+  document.getElementById('app-salvar-btn').textContent = 'Adicionar aplicativo';
+  document.getElementById('app-cancelar-btn').style.display = 'none';
+  if (!manterStatus) statusApp('');
+}
+
+function editarAplicativo(id) {
+  const d = APPS_ADMIN[id];
+  if (!d) return;
+  limparFormularioApp();
+  appEditandoId = id;
+  document.getElementById('app-nome').value = d.nome || '';
+  document.getElementById('app-descricao').value = d.descricao || '';
+  document.getElementById('app-preco').value = typeof d.preco === 'number' ? String(d.preco).replace('.', ',') : '';
+  document.getElementById('app-preco-detalhe').value = d.precoDetalhe || '';
+  document.getElementById('app-versao').value = d.versao || '';
+  document.getElementById('app-ordem').value = d.ordem || '';
+  document.getElementById('app-ativo').checked = d.ativo !== false;
+  document.getElementById('app-download').checked = !!d.mostrarDownload;
+  document.getElementById('app-apk-info').textContent = d.apkCaminho
+    ? 'APK atual: ' + (d.apkNomeOriginal || d.apkCaminho) + ' (' + tamanhoTexto(d.apkTamanho) + '). Escolha outro arquivo só se quiser trocar pela versão nova.'
+    : 'Este app ainda não tem APK enviado.';
+  const qtd = Array.isArray(d.fotos) ? d.fotos.length : 0;
+  document.getElementById('app-prints-info').textContent = qtd
+    ? 'Tem ' + qtd + ' print(s). Se escolher novos, eles substituem os atuais.' : '';
+  document.getElementById('app-form-titulo').textContent = 'Editar aplicativo';
+  document.getElementById('app-salvar-btn').textContent = 'Salvar alterações';
+  document.getElementById('app-cancelar-btn').style.display = 'inline-block';
+  document.getElementById('app-form-box').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function salvarAplicativo() {
+  const nome = document.getElementById('app-nome').value.trim();
+  if (!nome) { alert('Preencha o nome do aplicativo.'); return; }
+  let preco;
+  try { preco = lerPreco(document.getElementById('app-preco').value); }
+  catch (e) { alert('Preço inválido. Use só números, ex.: 49,90'); return; }
+
+  const apk = document.getElementById('app-apk').files[0];
+  const icone = document.getElementById('app-icone').files[0];
+  const prints = document.getElementById('app-prints').files;
+  const token = lerTokenGitHub();
+  const anterior = appEditandoId ? APPS_ADMIN[appEditandoId] : null;
+
+  if (apk) {
+    if (!/\.apk$/i.test(apk.name)) { alert('O arquivo escolhido não é um APK.'); return; }
+    if (apk.size > APK_LIMITE_BYTES) { alert('Esse APK tem ' + tamanhoTexto(apk.size) + '. O limite é 95 MB.'); return; }
+    if (!token) { alert('Para enviar o APK, salve antes a chave do GitHub (no fim desta tela).'); return; }
+  }
+
+  const versao = document.getElementById('app-versao').value.trim();
+  const dados = {
+    tipo: 'app',
+    nome: nome,
+    descricao: document.getElementById('app-descricao').value.trim(),
+    preco: preco,
+    precoDetalhe: document.getElementById('app-preco-detalhe').value.trim(),
+    versao: versao,
+    ordem: Number(document.getElementById('app-ordem').value) || 0,
+    ativo: document.getElementById('app-ativo').checked,
+    mostrarDownload: document.getElementById('app-download').checked,
+    atualizadoEm: Date.now()
+  };
+
+  const botao = document.getElementById('app-salvar-btn');
+  botao.disabled = true;
+  try {
+    if (icone) {
+      statusApp('Enviando o ícone...');
+      const r = await uploadImagemImgBB(icone);
+      dados.icone = r.url;
+      dados.iconeDelete = r.deleteUrl || '';
+      if (anterior && anterior.iconeDelete) tentarApagarDoImgBB(anterior.iconeDelete);
+    }
+    if (prints && prints.length) {
+      statusApp('Enviando ' + prints.length + ' print(s)...');
+      dados.fotos = await uploadVariasImagensImgBB(prints);
+      if (anterior && Array.isArray(anterior.fotos)) anterior.fotos.forEach(function(f) { tentarApagarDoImgBB(f.deleteUrl); });
+    }
+    if (apk) {
+      const caminho = (anterior && anterior.apkCaminho) || caminhoApkUnico(nome, appEditandoId);
+      statusApp('Preparando o APK...');
+      const base64 = await lerArquivoBase64(apk);
+      const sha = await ghEnviarBlob(token, base64, progressoApp);
+      statusApp('Publicando o APK no site...');
+      await ghCommit(token, [{ path: caminho, sha: sha }], 'Loja de apps: ' + nome + (versao ? ' ' + versao : ''));
+      dados.apkCaminho = caminho;
+      dados.apkTamanho = apk.size;
+      dados.apkNomeOriginal = apk.name;
+      dados.apkAtualizadoEm = Date.now();
+    }
+    statusApp('Salvando os dados...');
+    if (appEditandoId) {
+      await db.collection('portfolio').doc(appEditandoId).update(dados);
+    } else {
+      dados.criadoEm = Date.now();
+      if (!dados.fotos) dados.fotos = [];
+      await db.collection('portfolio').add(dados);
+    }
+    limparFormularioApp(true);
+    statusApp(apk ? 'Pronto! O APK fica disponível para baixar em 1 a 2 minutos.' : 'Pronto! Aplicativo salvo.');
+    carregarAplicativos();
+  } catch (e) {
+    statusApp('');
+    alert('Não deu certo: ' + (e && e.message ? e.message : e));
+  } finally {
+    botao.disabled = false;
+    progressoApp(null);
+  }
+}
+
+function copiarLinkApk(id) {
+  const d = APPS_ADMIN[id];
+  if (!d || !d.apkCaminho) return;
+  const url = SITE_URL + d.apkCaminho + '?v=' + (d.apkAtualizadoEm || '');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function() {
+      alert('Link do APK copiado! É só colar no WhatsApp do cliente.\n\n' + url);
+    }).catch(function() { prompt('Copie o link do APK:', url); });
+  } else {
+    prompt('Copie o link do APK:', url);
+  }
+}
+
+async function apagarAplicativo(id) {
+  const d = APPS_ADMIN[id];
+  if (!d) return;
+  if (!confirm('Apagar o aplicativo "' + (d.nome || '') + '" da loja?')) return;
+  try {
+    await db.collection('portfolio').doc(id).delete();
+    if (d.iconeDelete) tentarApagarDoImgBB(d.iconeDelete);
+    if (Array.isArray(d.fotos)) d.fotos.forEach(function(f) { tentarApagarDoImgBB(f.deleteUrl); });
+    if (appEditandoId === id) limparFormularioApp();
+    if (d.apkCaminho) {
+      const token = lerTokenGitHub();
+      if (token) {
+        try { await ghCommit(token, [{ path: d.apkCaminho, sha: null }], 'Loja de apps: remove ' + (d.nome || '')); }
+        catch (e) { alert('O app saiu da loja, mas não consegui apagar o arquivo APK do GitHub: ' + e.message); }
+      } else {
+        alert('O app saiu da loja. O arquivo APK continua guardado no GitHub porque não há chave do GitHub neste aparelho.');
+      }
+    }
+    carregarAplicativos();
+  } catch (e) {
+    alert('Erro ao apagar: ' + e.message);
+  }
 }

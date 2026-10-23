@@ -169,6 +169,89 @@
       </div>
     </div>
 
+    <div id="painel-aplicativos" class="admin-aba" style="display:none">
+      <div class="admin-box">
+        <h2>Aplicativos à venda</h2>
+        <div id="lista-aplicativos"><p class="admin-hint">Carregando...</p></div>
+      </div>
+
+      <div class="admin-box" id="app-form-box">
+        <h2 id="app-form-titulo">Adicionar aplicativo</h2>
+        <div class="admin-field">
+          <label>Nome do aplicativo</label>
+          <input type="text" id="app-nome">
+        </div>
+        <div class="admin-field">
+          <label>Descrição completa (o que o app faz, para quem é, o que vem incluso)</label>
+          <textarea id="app-descricao" style="min-height:140px"></textarea>
+        </div>
+        <div class="admin-field">
+          <label>Preço em reais (ex.: 49,90 — coloque 0 para grátis, ou deixe vazio para mostrar "Consulte")</label>
+          <input type="text" id="app-preco" inputmode="decimal" placeholder="49,90">
+        </div>
+        <div class="admin-field">
+          <label>Detalhe do preço (opcional — ex.: por aparelho, pagamento único, mensal)</label>
+          <input type="text" id="app-preco-detalhe">
+        </div>
+        <div class="admin-field">
+          <label>Versão (ex.: 1.0.0)</label>
+          <input type="text" id="app-versao">
+        </div>
+        <div class="admin-field">
+          <label>Arquivo APK</label>
+          <input type="file" id="app-apk" accept=".apk,application/vnd.android.package-archive">
+          <p id="app-apk-info" class="admin-hint"></p>
+        </div>
+        <div class="admin-field">
+          <label>Ícone do app (imagem quadrada)</label>
+          <input type="file" id="app-icone" accept="image/*">
+        </div>
+        <div class="admin-field">
+          <label>Prints de tela (opcional, pode escolher várias de uma vez)</label>
+          <input type="file" id="app-prints" accept="image/*" multiple>
+          <p id="app-prints-info" class="admin-hint"></p>
+        </div>
+        <div class="admin-field">
+          <label>Ordem na loja (número — o menor aparece primeiro)</label>
+          <input type="number" id="app-ordem">
+        </div>
+        <div class="admin-field">
+          <label class="checkbox-label"><input type="checkbox" id="app-ativo" checked> Mostrar este app no site</label>
+        </div>
+        <div class="admin-field">
+          <label class="checkbox-label"><input type="checkbox" id="app-download"> Mostrar botão "Baixar APK" no site (para apps grátis ou protegidos por chave de licença)</label>
+        </div>
+        <p id="app-status" class="admin-hint"></p>
+        <div id="app-progresso" class="app-progresso" style="display:none"><div id="app-progresso-barra"></div></div>
+        <button class="admin-btn" id="app-salvar-btn" onclick="salvarAplicativo()">Adicionar aplicativo</button>
+        <button class="admin-btn secondary" id="app-cancelar-btn" onclick="limparFormularioApp()" style="display:none">Cancelar edição</button>
+      </div>
+
+      <div class="admin-box">
+        <h2>Chave do GitHub (para enviar APKs)</h2>
+        <p id="gh-status" class="admin-hint"></p>
+        <div class="admin-field">
+          <label>Cole aqui a chave (token) do GitHub</label>
+          <input type="password" id="gh-token" autocomplete="off" placeholder="github_pat_...">
+        </div>
+        <button class="admin-btn" onclick="salvarTokenGitHub()">Salvar chave</button>
+        <button class="admin-btn secondary" onclick="removerTokenGitHub()">Remover chave deste aparelho</button>
+        <details class="gh-ajuda">
+          <summary>Como criar a chave (só uma vez)</summary>
+          <ol>
+            <li>No GitHub, toque na sua foto (canto de cima) e entre em <b>Settings</b> ("Configurações").</li>
+            <li>Desça até o fim do menu e toque em <b>Developer settings</b> ("Configurações de desenvolvedor").</li>
+            <li>Toque em <b>Personal access tokens</b> ("Tokens de acesso pessoal") → <b>Fine-grained tokens</b> ("Tokens refinados") → <b>Generate new token</b> ("Gerar novo token").</li>
+            <li>Em <b>Token name</b> ("Nome do token") escreva: Loja de apps do site. Em <b>Expiration</b> ("Validade") escolha o maior prazo.</li>
+            <li>Em <b>Repository access</b> ("Acesso a repositórios") marque <b>Only select repositories</b> ("Somente repositórios selecionados") e escolha <b>fortaleza-digital-site</b>.</li>
+            <li>Em <b>Permissions</b> ("Permissões") → <b>Repository permissions</b> ("Permissões do repositório") → <b>Contents</b> ("Conteúdo"), escolha <b>Read and write</b> ("Leitura e escrita").</li>
+            <li>Toque em <b>Generate token</b> ("Gerar token"), copie o código que começa com <b>github_pat_</b> e cole no campo acima.</li>
+          </ol>
+          <p class="admin-hint">A chave fica guardada só neste aparelho. Se trocar de celular ou limpar o navegador, é só colar de novo.</p>
+        </details>
+      </div>
+    </div>
+
     <div id="painel-contato" class="admin-aba" style="display:none">
       <div class="admin-box">
         <h2>Contato</h2>
@@ -277,6 +360,10 @@
     <button type="button" class="admin-tab" data-aba="portfolio" onclick="mostrarAba('portfolio')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
       Portfólio
+    </button>
+    <button type="button" class="admin-tab" data-aba="aplicativos" onclick="mostrarAba('aplicativos')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+      Apps
     </button>
     <button type="button" class="admin-tab" data-aba="contato" onclick="mostrarAba('contato')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h16v11H8l-4 4V5z"/></svg>

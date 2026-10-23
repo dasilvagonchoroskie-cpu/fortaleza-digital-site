@@ -56,6 +56,8 @@ function abrirLightbox(id) {
   if (!data) return;
   document.getElementById('lightbox-titulo').textContent = data.titulo || '';
   document.getElementById('lightbox-descricao').textContent = data.descricao || '';
+  document.getElementById('lightbox-meta').textContent = '';
+  document.getElementById('lightbox-acoes').innerHTML = '';
   const fotos = fotosDoProjeto(data);
   const container = document.getElementById('lightbox-fotos');
   container.innerHTML = fotos.map(function(f) {
@@ -131,6 +133,7 @@ db.collection('portfolio').get().then(function(snapshot) {
 
   snapshot.forEach(function(doc) {
     const data = doc.data();
+    if (data.tipo === 'app') return; // apps da loja aparecem na seção Aplicativos
     if (data.titulo === 'Em breve' && !data.descricao) {
       return; // ignora o placeholder inicial
     }
@@ -224,3 +227,102 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// ===================== LOJA DE APLICATIVOS =====================
+// Os apps ficam na coleção "portfolio" com tipo: 'app' (cadastrados na aba Apps do painel).
+let APPS_CACHE = {};
+let WHATSAPP_LOJA = '';
+
+function precoApp(d) {
+  if (typeof d.preco === 'number' && d.preco > 0) return d.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  if (d.preco === 0) return 'Grátis';
+  return 'Consulte';
+}
+
+function metaApp(d) {
+  const partes = [];
+  if (d.versao) partes.push('Versão ' + d.versao);
+  if (d.apkTamanho) partes.push((d.apkTamanho / 1048576).toFixed(1).replace('.', ',') + ' MB');
+  partes.push('Android');
+  return partes.join(' · ');
+}
+
+function botoesApp(d) {
+  let html = '';
+  if (WHATSAPP_LOJA) {
+    const msg = 'Olá! Tenho interesse no aplicativo ' + (d.nome || '') + ' (' + precoApp(d) + ') que vi no site.';
+    const link = 'https://wa.me/' + WHATSAPP_LOJA + '?text=' + encodeURIComponent(msg);
+    html += `<a class="app-btn" href="${escapeHtml(link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${d.preco === 0 ? 'Pedir pelo WhatsApp' : 'Comprar pelo WhatsApp'}</a>`;
+  }
+  if (d.mostrarDownload && d.apkCaminho) {
+    const apk = d.apkCaminho + '?v=' + (d.apkAtualizadoEm || '');
+    html += `<a class="app-btn secundario" href="${escapeHtml(apk)}" download onclick="event.stopPropagation()">Baixar APK</a>`;
+  }
+  return html;
+}
+
+function abrirApp(id) {
+  const d = APPS_CACHE[id];
+  if (!d) return;
+  document.getElementById('lightbox-titulo').textContent = d.nome || '';
+  document.getElementById('lightbox-meta').textContent = precoApp(d) + (d.precoDetalhe ? ' — ' + d.precoDetalhe : '') + '  ·  ' + metaApp(d);
+  document.getElementById('lightbox-descricao').textContent = d.descricao || '';
+  document.getElementById('lightbox-acoes').innerHTML = botoesApp(d);
+  const fotos = Array.isArray(d.fotos) ? d.fotos : [];
+  document.getElementById('lightbox-fotos').innerHTML = fotos.map(function(f) {
+    return '<img src="' + escapeHtml(f.url) + '" alt="' + escapeHtml(d.nome || '') + '" loading="lazy">';
+  }).join('');
+  document.getElementById('lightbox').style.display = 'flex';
+}
+
+Promise.all([
+  db.collection('portfolio').where('tipo', '==', 'app').get(),
+  db.collection('contato').limit(1).get()
+]).then(function(resultados) {
+  const contato = resultados[1];
+  if (!contato.empty) WHATSAPP_LOJA = String(contato.docs[0].data().whatsapp || '').replace(/\D/g, '');
+
+  const lista = [];
+  resultados[0].forEach(function(doc) {
+    const d = doc.data();
+    if (d.ativo === false) return;
+    APPS_CACHE[doc.id] = d;
+    lista.push(Object.assign({ _id: doc.id }, d));
+  });
+  if (!lista.length) return;
+  lista.sort(function(a, b) {
+    const oa = Number(a.ordem) || 0, ob = Number(b.ordem) || 0;
+    return oa !== ob ? oa - ob : String(a.nome || '').localeCompare(String(b.nome || ''));
+  });
+
+  const container = document.getElementById('apps-lista');
+  container.innerHTML = '';
+  lista.forEach(function(d) {
+    const iconeHtml = d.icone
+      ? `<img src="${escapeHtml(d.icone)}" alt="" class="app-icone" loading="lazy">`
+      : `<div class="app-icone app-icone-vazio">${escapeHtml((d.nome || '?').charAt(0).toUpperCase())}</div>`;
+    const card = document.createElement('div');
+    card.className = 'app-card';
+    card.setAttribute('role', 'button');
+    card.tabIndex = 0;
+    card.onclick = function() { abrirApp(d._id); };
+    card.innerHTML = `
+      <div class="app-card-topo">
+        ${iconeHtml}
+        <div>
+          <h3>${escapeHtml(d.nome || '')}</h3>
+          <span class="app-meta">${escapeHtml(metaApp(d))}</span>
+        </div>
+      </div>
+      <p class="app-desc">${escapeHtml(d.descricao || '')}</p>
+      <p class="app-preco">${escapeHtml(precoApp(d))}${d.precoDetalhe ? ` <small>${escapeHtml(d.precoDetalhe)}</small>` : ''}</p>
+      <div class="app-acoes">${botoesApp(d)}</div>
+      <span class="portfolio-card-count">Toque para ver detalhes${Array.isArray(d.fotos) && d.fotos.length ? ' e prints' : ''}</span>
+    `;
+    container.appendChild(card);
+  });
+  document.getElementById('aplicativos').style.display = 'block';
+  document.getElementById('nav-apps').style.display = '';
+}).catch(function(error) {
+  console.error('Erro ao carregar aplicativos:', error);
+});

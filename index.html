@@ -68,6 +68,7 @@
     <nav class="site-nav">
       <a href="#servicos">Serviços</a>
       <a href="#portfolio">Portfólio</a>
+      <a href="#aplicativos" id="nav-apps" style="display:none">Apps</a>
       <a href="#equipe">Equipe</a>
       <a href="#contato">Contato</a>
     </nav>
@@ -110,6 +111,15 @@
     </div>
   </section>
 
+  <section id="aplicativos" class="section" style="display:none">
+    <div class="container">
+      <p class="eyebrow">Loja</p>
+      <h2>Aplicativos</h2>
+      <p class="apps-intro">Aplicativos prontos para Android. Toque em um app para ver todos os detalhes.</p>
+      <div class="apps-grid" id="apps-lista"></div>
+    </div>
+  </section>
+
   <section id="equipe" class="section" style="display:none">
     <div class="container">
       <p class="eyebrow">Quem atende você</p>
@@ -146,7 +156,9 @@
   <div class="lightbox-inner">
     <button class="lightbox-close" onclick="fecharLightbox()" type="button" aria-label="Fechar">×</button>
     <h3 id="lightbox-titulo"></h3>
+    <p id="lightbox-meta" class="lightbox-meta"></p>
     <p id="lightbox-descricao"></p>
+    <div id="lightbox-acoes" class="app-acoes"></div>
     <div class="lightbox-fotos" id="lightbox-fotos"></div>
   </div>
 </div>
