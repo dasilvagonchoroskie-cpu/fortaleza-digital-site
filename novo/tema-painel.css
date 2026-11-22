@@ -1,0 +1,26 @@
+/* Visual novo (estilo Fortaleza Move) para o PAINEL. Previa em /novo/admin.html.
+   Carrega DEPOIS de ../style.css. Paleta travada com !important, igual ao site novo. */
+:root{
+  --bg:#f6f7fb !important; --surface:#ffffff !important; --surface-2:#eef1f8 !important; --border:#e3e7f1 !important;
+  --accent:#0059d1 !important; --accent-dim:#0a2f8f !important; --accent-ink:#ffffff !important;
+  --text:#0d1b3d !important; --text-muted:#5b6785 !important;
+  --danger:#c62828 !important; --danger-bg:#fdeaea !important; --success:#1b7f4b !important; --success-bg:#e6f6ec !important;
+  --navy:#061a4a; --navy2:#0a2f8f; --cyan:#08cfe7; --gold:#f2a911; --gold2:#ffcf4d;
+}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.site-header{background:var(--navy);border-bottom:1px solid rgba(255,207,77,.22);backdrop-filter:none}
+.brand-name{color:#fff;font-weight:800;letter-spacing:1px}
+.brand-name b{color:var(--gold)}
+.brand-tag{color:#9fb0d8}
+.site-nav a{color:#cfd7ee;font-weight:600}
+.site-nav a:hover{color:var(--gold2)}
+.admin-box{background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 6px 20px rgba(6,26,74,.06)}
+.admin-box h2{color:var(--text);font-weight:800}
+.admin-box h2::after{content:"";display:block;width:44px;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--gold2));margin-top:8px}
+.admin-field input:focus,.admin-field textarea:focus{border-color:var(--gold)}
+.admin-btn{background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);font-weight:800;border-radius:999px;padding:10px 22px}
+.admin-btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+.admin-btn.secondary:hover{border-color:var(--gold);color:var(--text)}
+.admin-tabs{background:var(--navy);border-top:1px solid rgba(255,207,77,.22)}
+.admin-tab{color:#9fb0d8}
+.admin-tab.ativo{color:var(--gold2)}
