@@ -1,0 +1,69 @@
+/* Visual "Fortaleza Move" para o site principal (previa em /novo/). Carrega DEPOIS de ../style.css.
+   As variaveis usam !important de proposito: travam a paleta nova mesmo que o tema salvo
+   no painel (cache/Firestore) tente trocar as cores pelo script. */
+:root{
+  --bg:#f6f7fb !important; --surface:#ffffff !important; --surface-2:#eef1f8 !important; --border:#e3e7f1 !important;
+  --accent:#0059d1 !important; --accent-dim:#0a2f8f !important; --accent-ink:#ffffff !important;
+  --text:#0d1b3d !important; --text-muted:#5b6785 !important;
+  --navy:#061a4a; --navy2:#0a2f8f; --cyan:#08cfe7; --gold:#f2a911; --gold2:#ffcf4d;
+}
+html{scroll-padding-top:76px}
+a:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.site-header{background:var(--navy);border-bottom:1px solid rgba(255,207,77,.22);backdrop-filter:none}
+.header-inner{flex-wrap:wrap;gap:8px 20px}
+.brand-name{color:#fff;font-weight:800;letter-spacing:1px;font-size:1.05rem}
+.brand-name b{color:var(--gold)}
+.brand-tag{color:#9fb0d8}
+.site-nav a{color:#cfd7ee;font-weight:600}
+.site-nav a:hover{color:var(--gold2)}
+.banner-wrap{background:var(--navy);border-bottom:0}
+.hero{color:#fff;border-bottom:0;padding:76px 0 68px;
+  background:radial-gradient(1100px 520px at 85% -15%,rgba(8,207,231,.28),transparent 60%),
+             radial-gradient(800px 400px at 0% 110%,rgba(0,89,209,.35),transparent 60%),
+             linear-gradient(135deg,var(--navy),var(--navy2))}
+.hero-inner{max-width:1080px;display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:center}
+.hero .eyebrow{display:inline-block;color:var(--gold2);border:1px solid rgba(255,207,77,.4);padding:5px 14px;border-radius:999px;font-size:.78rem;letter-spacing:2px;margin-bottom:18px}
+.hero h1{color:#fff;font-weight:800;font-size:clamp(2rem,5.4vw,3.2rem);line-height:1.12}
+.hero h1 .accent{color:var(--gold)}
+.hero-desc{color:#cfd7ee;font-size:1.08rem;max-width:520px;margin-bottom:30px}
+.cta{background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);font-weight:800;font-size:1rem;padding:14px 30px;border-radius:999px;box-shadow:0 8px 22px rgba(242,169,17,.35);transition:transform .15s}
+.cta:hover{opacity:1;transform:translateY(-2px)}
+.hero-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,207,77,.25);border-radius:24px;padding:26px;backdrop-filter:blur(6px)}
+.hero-card h3{color:var(--gold2);font-size:.9rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px}
+.hero-card ul{list-style:none;display:grid;gap:12px}
+.hero-card li{color:#fff;font-weight:600;padding-left:26px;position:relative}
+.hero-card li::before{content:"";position:absolute;left:0;top:.45em;width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2))}
+.section{border-bottom:0;padding:64px 0}
+.section-alt{background:#fff}
+.section h2{color:var(--text);font-weight:800;font-size:clamp(1.6rem,4vw,2.1rem);margin-bottom:30px}
+.section h2::after{content:"";display:block;width:56px;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--gold2));margin-top:10px}
+.section .eyebrow{color:var(--accent);font-weight:700;letter-spacing:2px;font-size:.78rem}
+.service-card,.portfolio-card,.team-card,.app-card{background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 6px 20px rgba(6,26,74,.06);transition:transform .15s,box-shadow .15s,border-color .15s}
+.service-card{border-top:4px solid var(--gold);padding:24px}
+.service-card h3,.portfolio-card h3,.app-card h3,.team-card h3{color:var(--text);font-weight:800}
+.service-card h3{font-size:1.05rem}
+.service-card p{font-size:.9rem}
+.service-card:hover,.portfolio-card:hover,.team-card:hover,.app-card:hover,.app-card:focus-visible{transform:translateY(-3px);box-shadow:0 14px 30px rgba(6,26,74,.12);border-color:var(--gold)}
+.portfolio-img,.portfolio-img-placeholder{background:var(--surface-2)}
+.portfolio-card-count{color:var(--accent);font-weight:700}
+.team-photo{border-color:var(--gold)}
+.team-photo-placeholder,.app-icone-vazio{background:var(--surface-2);color:var(--navy)}
+.team-links a{border-radius:999px;font-weight:600}
+.app-btn{background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);font-weight:800;border-radius:999px;padding:10px 18px}
+.app-btn.secundario{background:transparent;color:var(--text);border:1px solid var(--border)}
+.app-btn.secundario:hover{border-color:var(--gold);color:var(--text)}
+.lightbox-inner{background:#fff;border-radius:18px}
+#contato{color:#fff;background:linear-gradient(135deg,var(--navy),var(--navy2))}
+#contato h2{color:#fff}
+#contato .eyebrow{color:var(--gold2)}
+.contact-inner{max-width:640px}
+.contact-desc{color:#cfd7ee}
+.contact-link{border:2px solid var(--gold);color:var(--gold2);border-radius:999px;padding:12px 24px;font-weight:700;transition:background .15s,color .15s}
+.contact-link:hover{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+.site-footer{background:var(--navy);color:#9fb0d8;padding:30px 0}
+.admin-link,.admin-link:hover{color:#9fb0d8}
+@media (max-width:760px){
+  .hero{padding:52px 0 48px}
+  .hero-inner{grid-template-columns:1fr;gap:28px}
+  .site-nav{justify-content:flex-start}
+}
