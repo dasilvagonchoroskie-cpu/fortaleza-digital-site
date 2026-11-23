@@ -1,7 +1,7 @@
 // Service worker da Fortaleza Digital Security.
 // Estratégia: rede primeiro (o site sempre mostra a versão mais nova) e, sem internet, usa a cópia guardada.
 // Não guarda o painel administrativo, os APKs nem outros domínios (Firebase/Google).
-var VERSAO = "fd-v2";
+var VERSAO = "fd-v3";
 var BASICO = ["./", "index.html", "style.css", "tema-move.css", "logo.png", "script.js", "firebase-config.js", "icon-192.png"];
 
 self.addEventListener("install", function (e) {
