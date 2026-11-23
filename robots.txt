@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /novo/
+Disallow: /apks/
+
+Sitemap: https://fortalezadigitalsecurity.com.br/sitemap.xml
