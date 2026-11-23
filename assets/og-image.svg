@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b2a73"/>
+      <stop offset="0.55" stop-color="#061a4a"/>
+      <stop offset="1" stop-color="#030d29"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.2" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f2b01e" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#f2b01e" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- arcos decorativos -->
+  <path d="M 820 -20 C 1000 120 1120 260 1230 330" fill="none" stroke="#f2b01e" stroke-opacity="0.45" stroke-width="2"/>
+  <path d="M 920 660 C 1000 540 1080 480 1230 440" fill="none" stroke="#f2b01e" stroke-opacity="0.35" stroke-width="2"/>
+
+  <!-- logo (assets/logo-grande.png) -->
+  <circle cx="188" cy="315" r="104" fill="none" stroke="#f2b01e" stroke-opacity="0.55" stroke-width="2"/>
+  <image x="100" y="227" width="176" height="176" xlink:href="logo-grande.png"/>
+
+  <!-- textos: nome oficial "Fortaleza Digital Security" -->
+  <text x="340" y="222" font-family="DejaVu Sans" font-weight="bold" font-size="24" letter-spacing="6" fill="#f2b01e">SEGURANÇA E TECNOLOGIA</text>
+  <rect x="340" y="240" width="90" height="5" rx="2.5" fill="#f2b01e"/>
+  <text x="336" y="335" font-family="DejaVu Sans" font-weight="bold" font-size="92" fill="#ffffff">FORTALEZA</text>
+  <text x="338" y="422" font-family="DejaVu Sans" font-weight="bold" font-size="70" fill="#f2b01e">DIGITAL SECURITY</text>
+  <text x="340" y="486" font-family="DejaVu Sans" font-size="30" fill="#c9d4f0">Sites, aplicativos e proteção digital</text>
+  <text x="340" y="528" font-family="DejaVu Sans" font-size="30" fill="#c9d4f0">para o seu negócio.</text>
+  <text x="340" y="590" font-family="DejaVu Sans" font-size="22" letter-spacing="1" fill="#8fa3d6">fortalezadigitalsecurity.com.br</text>
+</svg>
