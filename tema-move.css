@@ -67,3 +67,9 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offse
   .hero-inner{grid-template-columns:1fr;gap:28px}
   .site-nav{justify-content:flex-start}
 }
+
+/* Portfólio: imagem inteira (sem corte) e texto completo no card */
+.portfolio-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));align-items:start}
+.portfolio-img{aspect-ratio:auto;height:auto;object-fit:contain}
+.portfolio-img-placeholder{aspect-ratio:16/9}
+.portfolio-card p{display:block;-webkit-line-clamp:unset;overflow:visible;line-height:1.5}
